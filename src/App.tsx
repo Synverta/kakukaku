@@ -11,6 +11,13 @@ import {
   useSearchParams,
 } from 'react-router-dom'
 import './App.css'
+import { CrowdfundHome } from './crowdfund/CrowdfundHome'
+import { CampaignDetail } from './crowdfund/CampaignDetail'
+import { IpStudio } from './crowdfund/IpStudio'
+import { LaunchCampaign } from './crowdfund/LaunchCampaign'
+import { MyOrders } from './crowdfund/MyOrders'
+import { RegisterPage } from './pages/RegisterPage'
+import { useAuth } from './lib/auth'
 import {
   categories,
   comments,
@@ -230,10 +237,16 @@ function App() {
         <Route path="/rank" element={<RankPage />} />
         <Route path="/live" element={<LivePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/upload" element={<UploadPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/video/:videoId" element={<VideoPage />} />
+        <Route path="/crowdfund" element={<CrowdfundHome />} />
+        <Route path="/crowdfund/project/:id" element={<CampaignDetail />} />
+        <Route path="/crowdfund/create" element={<LaunchCampaign />} />
+        <Route path="/my-orders" element={<MyOrders />} />
+        <Route path="/ip-studio" element={<IpStudio />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </UserStateContext.Provider>
@@ -310,6 +323,21 @@ function HomePage() {
           {heroRecommendations.map((video) => (
             <CompactVideoCard key={video.id} videoId={video.id} />
           ))}
+        </div>
+      </section>
+
+      <section className="cf-home-promo">
+        <div>
+          <strong>AIGC 共创众筹 · 帮助创作人快速打造 IP</strong>
+          <p>粉丝用 token 支持你心中的 IP，平台批量生成把单次打造的成本打下来。从角色设定到成片，一个人也能跑完一条 IP 生产线。</p>
+        </div>
+        <div className="cf-hero-actions">
+          <Link className="primary-button" to="/crowdfund">
+            浏览众筹项目
+          </Link>
+          <Link className="ghost-button" to="/ip-studio">
+            进入 IP 工坊
+          </Link>
         </div>
       </section>
 
@@ -788,13 +816,36 @@ function LivePage() {
 }
 
 function LoginPage() {
+  const { login } = useAuth()
+  const navigate = useNavigate()
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setSubmitting(true)
+    try {
+      await login(username.trim(), password)
+      navigate('/profile')
+    } catch (err) {
+      const message = typeof err === 'object' && err && 'message' in err ? String((err as { message?: unknown }).message ?? '') : ''
+      const code = typeof err === 'object' && err && 'error' in err ? String((err as { error?: unknown }).error ?? '') : ''
+      setError(message || code || '登录失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <AppShell>
       <section className="auth-layout">
         <div className="hero-copy auth-copy">
           <span className="eyebrow">账号登录</span>
           <h1>回到你的追更列表、收藏夹和创作台。</h1>
-          <p>这个页面模拟视频网站登录入口，包含常见的账号密码登录、快捷登录和登录后权益说明。</p>
+          <p>登录后可以同步数据、发起 IP 众筹、用 token 支持别人。</p>
           <div className="auth-benefits">
             <div>
               <strong>同步观看记录</strong>
@@ -814,33 +865,40 @@ function LoginPage() {
           <div className="section-heading">
             <div>
               <span className="section-kicker">欢迎回来</span>
-              <h2>登录 KakuKaku Video</h2>
+              <h2>登录 kakukaku</h2>
             </div>
           </div>
-          <form className="auth-form">
+          <form className="auth-form" onSubmit={handleSubmit}>
             <label>
-              用户名 / 手机号
-              <input defaultValue="paper-city" type="text" />
+              用户名
+              <input
+                autoComplete="username"
+                minLength={3}
+                required
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+              />
             </label>
             <label>
               密码
-              <input defaultValue="12345678" type="password" />
+              <input
+                autoComplete="current-password"
+                minLength={8}
+                required
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
             </label>
-            <div className="auth-form-row">
-              <label className="checkbox-line">
-                <input defaultChecked type="checkbox" />
-                7 天内免登录
-              </label>
-              <Link to="/profile">忘记密码</Link>
-            </div>
-            <Link className="primary-button full-button" to="/profile">
-              登录并进入个人中心
-            </Link>
+            {error ? <div className="auth-error">{error}</div> : null}
+            <button type="submit" className="primary-button full-button" disabled={submitting}>
+              {submitting ? '正在登录…' : '登录并进入个人中心'}
+            </button>
           </form>
           <div className="oauth-row">
-            <button type="button">短信登录</button>
-            <button type="button">扫码登录</button>
-            <button type="button">游客体验</button>
+            <Link to="/register" className="ghost-button full-button" style={{ display: 'inline-flex' }}>
+              还没账号？去注册
+            </Link>
           </div>
         </section>
       </section>
@@ -954,6 +1012,10 @@ function ProfilePage() {
               <Link className="quick-link-card" to="/live">
                 <strong>直播预约</strong>
                 <span>配置直播预告、封面和开播提醒</span>
+              </Link>
+              <Link className="quick-link-card" to="/my-orders">
+                <strong>我的众筹订单</strong>
+                <span>关闭未支付订单、对已支付订单申请退款</span>
               </Link>
               <article className="quick-link-card static-card">
                 <strong>已关注创作者</strong>
@@ -1800,7 +1862,34 @@ function VideoPage() {
   )
 }
 
-function AppShell({ children }: { children: ReactNode }) {
+function HeaderAuthAction() {
+  const { user, logout, loading } = useAuth()
+
+  if (loading) {
+    return <span className="header-link">…</span>
+  }
+
+  if (!user) {
+    return (
+      <Link className="header-avatar" to="/login">
+        登录
+      </Link>
+    )
+  }
+
+  return (
+    <>
+      <Link className="header-link" to="/profile" title={user.username}>
+        {user.username}
+      </Link>
+      <button className="header-link" type="button" onClick={logout}>
+        退出
+      </button>
+    </>
+  )
+}
+
+export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -1809,6 +1898,8 @@ function AppShell({ children }: { children: ReactNode }) {
     { label: '动态', to: '/history' },
     { label: '热门', to: '/rank' },
     { label: '直播', to: '/live' },
+    { label: '众筹', to: '/crowdfund' },
+    { label: 'IP 工坊', to: '/ip-studio' },
     { label: '创作中心', to: '/upload' },
   ]
 
@@ -1833,8 +1924,12 @@ function AppShell({ children }: { children: ReactNode }) {
       return location.pathname === '/' && !searchParams.get('cat')
     }
 
-    if (to === '/rank' || to === '/live') {
+    if (to === '/rank' || to === '/live' || to === '/ip-studio') {
       return location.pathname === to
+    }
+
+    if (to === '/crowdfund') {
+      return location.pathname === '/crowdfund' || location.pathname.startsWith('/crowdfund/')
     }
 
     if (to.startsWith('/?cat=')) {
@@ -1881,9 +1976,7 @@ function AppShell({ children }: { children: ReactNode }) {
                 {item.label}
               </Link>
             ))}
-            <Link className="header-avatar" to="/login">
-              登录
-            </Link>
+            <HeaderAuthAction />
           </div>
         </div>
       </header>

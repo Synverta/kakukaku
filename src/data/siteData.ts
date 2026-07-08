@@ -70,6 +70,8 @@ export const navigationItems: NavigationItem[] = [
   { label: '首页', to: '/' },
   { label: '排行榜', to: '/rank' },
   { label: '直播', to: '/live' },
+  { label: '众筹', to: '/crowdfund' },
+  { label: 'IP 工坊', to: '/ip-studio' },
 ]
 
 export const categories = [

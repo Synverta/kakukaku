@@ -1582,6 +1582,14 @@
   padding: 1.75rem;
 }
 
+.auth-error {
+  padding: 0.7rem 0.9rem;
+  border-radius: 14px;
+  background: rgba(255, 71, 102, 0.12);
+  color: #b3264f;
+  font-size: 0.9rem;
+}
+
 .auth-form,
 .upload-form-grid {
   display: grid;
