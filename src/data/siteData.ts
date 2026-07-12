@@ -12,15 +12,8 @@ export type Video = {
   tags: string[]
   cover: string
   videoSrc: string
-}
-
-export type LiveStream = {
-  id: string
-  title: string
-  streamer: string
-  viewers: string
-  topic: string
-  accent: string
+  /** 第三方平台嵌入地址（YouTube/Bilibili 等），设置后优先用 iframe 播放，节省自有带宽 */
+  embedUrl?: string
 }
 
 export type Spotlight = {
@@ -32,13 +25,6 @@ export type Spotlight = {
 export type NavigationItem = {
   label: string
   to: string
-}
-
-export type LiveMoment = {
-  time: string
-  title: string
-  host: string
-  label: string
 }
 
 export type ProfileStat = {
@@ -69,9 +55,8 @@ export type DanmakuSeed = {
 export const navigationItems: NavigationItem[] = [
   { label: '首页', to: '/' },
   { label: '排行榜', to: '/rank' },
-  { label: '直播', to: '/live' },
-  { label: '众筹', to: '/crowdfund' },
-  { label: 'IP 工坊', to: '/ip-studio' },
+  { label: '共创', to: '/crowdfund' },
+  { label: '社区', to: '/communities' },
 ]
 
 export const categories = [
@@ -104,6 +89,7 @@ export const videos: Video[] = [
     cover:
       'linear-gradient(135deg, rgba(255,122,89,0.95) 0%, rgba(255,196,140,0.95) 48%, rgba(34,39,58,0.9) 100%)',
     videoSrc: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+    embedUrl: 'https://www.youtube.com/embed/LXb3EKWsInQ',
   },
   {
     id: 'kitchen-lab-ramen',
@@ -121,6 +107,7 @@ export const videos: Video[] = [
     cover:
       'linear-gradient(135deg, rgba(244,162,97,0.96) 0%, rgba(255,221,160,0.94) 45%, rgba(97,63,38,0.95) 100%)',
     videoSrc: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    embedUrl: 'https://www.youtube.com/embed/aqz-KE-bpKQ',
   },
   {
     id: 'mech-choir-remix',
@@ -138,6 +125,7 @@ export const videos: Video[] = [
     cover:
       'linear-gradient(135deg, rgba(251,86,7,0.94) 0%, rgba(255,190,92,0.92) 50%, rgba(37,41,61,0.95) 100%)',
     videoSrc: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    embedUrl: 'https://www.youtube.com/embed/1La4QzGeaaQ',
   },
   {
     id: 'retro-console-build',
@@ -155,6 +143,7 @@ export const videos: Video[] = [
     cover:
       'linear-gradient(135deg, rgba(76,201,240,0.96) 0%, rgba(171,240,255,0.93) 44%, rgba(22,54,92,0.96) 100%)',
     videoSrc: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    embedUrl: 'https://www.youtube.com/embed/REu2BcnlD34',
   },
   {
     id: 'street-dance-finals',
@@ -172,6 +161,7 @@ export const videos: Video[] = [
     cover:
       'linear-gradient(135deg, rgba(239,71,111,0.95) 0%, rgba(255,168,133,0.94) 42%, rgba(68,15,39,0.96) 100%)',
     videoSrc: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+    embedUrl: 'https://www.youtube.com/embed/aqz-KE-bpKQ',
   },
   {
     id: 'cinema-one-take',
@@ -189,6 +179,7 @@ export const videos: Video[] = [
     cover:
       'linear-gradient(135deg, rgba(87,117,144,0.96) 0%, rgba(176,196,222,0.92) 48%, rgba(25,33,48,0.96) 100%)',
     videoSrc: 'https://storage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
+    embedUrl: 'https://www.youtube.com/embed/aqz-KE-bpKQ',
   },
   {
     id: 'planet-documentary',
@@ -206,6 +197,7 @@ export const videos: Video[] = [
     cover:
       'linear-gradient(135deg, rgba(144,224,239,0.96) 0%, rgba(230,248,255,0.93) 44%, rgba(54,78,110,0.96) 100%)',
     videoSrc: 'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+    embedUrl: 'https://www.youtube.com/embed/REu2BcnlD34',
   },
   {
     id: 'ghost-animal-mashup',
@@ -223,33 +215,7 @@ export const videos: Video[] = [
     cover:
       'linear-gradient(135deg, rgba(131,56,236,0.96) 0%, rgba(255,119,199,0.94) 45%, rgba(28,18,65,0.96) 100%)',
     videoSrc: 'https://storage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4',
-  },
-]
-
-export const liveStreams: LiveStream[] = [
-  {
-    id: 'studio-night-render',
-    title: '通宵渲染室：一起看动画短片最终合成',
-    streamer: '帧率补完计划',
-    viewers: '12.8万',
-    topic: '动画直播',
-    accent: 'linear-gradient(135deg, #ff8fab 0%, #fb6f92 100%)',
-  },
-  {
-    id: 'pixel-boss-rush',
-    title: '像素地牢 Boss Rush，无伤通关挑战',
-    streamer: '手柄发电站',
-    viewers: '8.4万',
-    topic: '游戏直播',
-    accent: 'linear-gradient(135deg, #ffd166 0%, #f77f00 100%)',
-  },
-  {
-    id: 'vinyl-lofi-room',
-    title: '黑胶 Lo-fi 房间，今晚只放雨夜城市采样',
-    streamer: '耳机公园',
-    viewers: '4.2万',
-    topic: '音乐直播',
-    accent: 'linear-gradient(135deg, #80ed99 0%, #38b000 100%)',
+    embedUrl: 'https://www.youtube.com/embed/1La4QzGeaaQ',
   },
 ]
 
@@ -276,43 +242,39 @@ export const comments = [
     user: '会飞的草稿纸',
     time: '2 小时前',
     content: '这条长镜头的景别切换太丝滑了，像把整座城市都做成了一个镜头轨道。',
+    role: 'member' as const,
   },
   {
     user: '番茄炒月亮',
     time: '1 小时前',
     content: '后半段进入高架桥那一段，弹幕密度直接起飞，适合循环三遍。',
+    role: 'mod' as const,
+    replyTo: '京圈最脏的',
+    replyContent: '同意，这一组信息量确实很大，截图都存了。',
   },
   {
     user: '南极风味汽水',
     time: '38 分钟前',
     content: '希望之后能出幕后制作，看起来建模、灯光和调色都花了很多心思。',
-  },
-]
-
-export const liveMoments: LiveMoment[] = [
-  {
-    time: '19:30',
-    title: '季度新番看片会',
-    host: '追更观测站',
-    label: '番剧首映',
+    role: 'member' as const,
   },
   {
-    time: '20:15',
-    title: '独立游戏试玩马拉松',
-    host: '手柄发电站',
-    label: '互动挑战',
+    user: '银河系装睡员',
+    time: '刚刚',
+    content: 'UP 主讲得很细，特别是聊到背景那一段，圈外人才看得懂。',
+    role: 'creator' as const,
   },
   {
-    time: '21:00',
-    title: '幕后建模直播答疑',
-    host: '纸片城建局',
-    label: '创作分享',
+    user: '清蒸早起鸟',
+    time: '5 分钟前',
+    content: 'BGM 一响就想起被《走面儿》支配的恐惧，这次终于看明白了。',
+    role: 'member' as const,
   },
   {
-    time: '22:30',
-    title: '黑胶城市夜谈',
-    host: '耳机公园',
-    label: '陪伴电台',
+    user: '加班备忘录',
+    time: '12 分钟前',
+    content: '把圈子、家族、人情这几条线拆开讲，比单纯吃瓜信息量大多了。',
+    role: 'member' as const,
   },
 ]
 

@@ -24,7 +24,7 @@ export function useCampaigns(): FetchState {
       const message = typeof err === 'object' && err && 'message' in err
         ? String((err as { message?: unknown }).message ?? '')
         : ''
-      setError(message || '加载众筹项目失败')
+      setError(message || '加载共创项目失败')
     } finally {
       setLoading(false)
     }

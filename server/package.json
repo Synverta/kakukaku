@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "db:test": "tsx src/dbTest.ts"
+    "db:test": "tsx src/dbTest.ts",
+    "db:migrate": "tsx src/migrate.ts",
+    "db:create-test-user": "tsx src/createTestUser.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

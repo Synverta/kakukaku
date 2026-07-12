@@ -130,3 +130,218 @@ CREATE TABLE IF NOT EXISTS refund_attempts (
 CREATE INDEX IF NOT EXISTS refund_attempts_order_idx    ON refund_attempts (order_id);
 CREATE INDEX IF NOT EXISTS refund_attempts_user_idx     ON refund_attempts (user_id);
 CREATE INDEX IF NOT EXISTS refund_attempts_status_idx   ON refund_attempts (status);
+
+-- 创作者作品表
+CREATE TABLE IF NOT EXISTS videos (
+  id            BIGSERIAL   PRIMARY KEY,
+  creator_id    BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title         VARCHAR(160) NOT NULL,
+  description   TEXT         NOT NULL DEFAULT '',
+  category      VARCHAR(60)  NOT NULL DEFAULT '动画',
+  tags          TEXT[]       NOT NULL DEFAULT '{}',
+  cover         TEXT         NOT NULL DEFAULT '',
+  video_src     TEXT         NOT NULL DEFAULT '',
+  embed_url     TEXT         NOT NULL DEFAULT '',
+  duration      VARCHAR(16)  NOT NULL DEFAULT '00:00',
+  status        VARCHAR(20)  NOT NULL DEFAULT 'draft',   -- draft / pending / published / rejected
+  views         BIGINT       NOT NULL DEFAULT 0,
+  likes         BIGINT       NOT NULL DEFAULT 0,
+  danmaku_count BIGINT       NOT NULL DEFAULT 0,
+  reject_reason TEXT,
+  scheduled_at  TIMESTAMPTZ,
+  published_at  TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS videos_creator_idx ON videos (creator_id);
+CREATE INDEX IF NOT EXISTS videos_status_idx  ON videos (status);
+
+-- =========================================================
+-- 创作中心 v1 扩展(2026-07)
+-- =========================================================
+
+-- 1) videos 扩展字段
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS content_type VARCHAR(20) NOT NULL DEFAULT 'video';
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS subtitle_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS pinned BOOLEAN     NOT NULL DEFAULT FALSE;
+
+-- 2) 评论(创作者可审核)
+CREATE TABLE IF NOT EXISTS comments (
+  id            BIGSERIAL   PRIMARY KEY,
+  video_id      BIGINT      NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+  user_id       BIGINT      NOT NULL REFERENCES users(id)  ON DELETE CASCADE,
+  author_name   VARCHAR(40) NOT NULL,
+  avatar_letter VARCHAR(2)  NOT NULL DEFAULT '',
+  content       TEXT        NOT NULL,
+  status        VARCHAR(16) NOT NULL DEFAULT 'visible',  -- visible | hidden | pinned
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS comments_video_idx  ON comments (video_id);
+CREATE INDEX IF NOT EXISTS comments_user_idx   ON comments (user_id);
+CREATE INDEX IF NOT EXISTS comments_status_idx ON comments (video_id, status);
+
+-- 3) 弹幕
+CREATE TABLE IF NOT EXISTS danmaku (
+  id            BIGSERIAL   PRIMARY KEY,
+  video_id      BIGINT      NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+  user_id       BIGINT      NOT NULL REFERENCES users(id)  ON DELETE CASCADE,
+  author_name   VARCHAR(40) NOT NULL,
+  text          VARCHAR(200) NOT NULL,
+  mode          VARCHAR(10) NOT NULL DEFAULT 'scroll',   -- scroll | top | bottom
+  color         VARCHAR(10) NOT NULL DEFAULT '#ffffff',
+  time_seconds  INTEGER     NOT NULL DEFAULT 0,
+  hidden        BOOLEAN     NOT NULL DEFAULT FALSE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS danmaku_video_idx ON danmaku (video_id, time_seconds);
+CREATE INDEX IF NOT EXISTS danmaku_user_idx  ON danmaku (user_id);
+
+-- 4) 关注关系(粉丝 -> 创作者)
+CREATE TABLE IF NOT EXISTS follows (
+  follower_id  BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  creator_id   BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (follower_id, creator_id),
+  CHECK (follower_id <> creator_id)
+);
+CREATE INDEX IF NOT EXISTS follows_creator_idx ON follows (creator_id);
+
+-- 5) 创作者聚合统计
+CREATE TABLE IF NOT EXISTS creator_stats (
+  user_id        BIGINT   PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  follower_count BIGINT   NOT NULL DEFAULT 0,
+  total_views    BIGINT   NOT NULL DEFAULT 0,
+  total_likes    BIGINT   NOT NULL DEFAULT 0,
+  total_danmaku  BIGINT   NOT NULL DEFAULT 0,
+  total_revenue  INTEGER  NOT NULL DEFAULT 0,
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 6) 收益流水(模拟)
+CREATE TABLE IF NOT EXISTS revenue_entries (
+  id           BIGSERIAL   PRIMARY KEY,
+  user_id      BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  source       VARCHAR(20) NOT NULL,                     -- views | charging | brand | activity
+  amount_cents INTEGER     NOT NULL,
+  memo         TEXT        NOT NULL DEFAULT '',
+  occurred_on  DATE        NOT NULL DEFAULT CURRENT_DATE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS revenue_user_idx ON revenue_entries (user_id, occurred_on DESC);
+
+-- 7) 任务(Growth)
+CREATE TABLE IF NOT EXISTS missions (
+  id          BIGSERIAL   PRIMARY KEY,
+  user_id     BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code        VARCHAR(40) NOT NULL,
+  title       VARCHAR(120) NOT NULL,
+  reward_text VARCHAR(120) NOT NULL,
+  progress    INTEGER     NOT NULL DEFAULT 0,
+  target      INTEGER     NOT NULL DEFAULT 1,
+  status      VARCHAR(16) NOT NULL DEFAULT 'active',    -- active | done | claimed
+  expires_at  TIMESTAMPTZ,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, code)
+);
+CREATE INDEX IF NOT EXISTS missions_user_idx ON missions (user_id, status);
+
+-- 8) 创作者权益
+CREATE TABLE IF NOT EXISTS rights_grants (
+  id         BIGSERIAL   PRIMARY KEY,
+  user_id    BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code       VARCHAR(40) NOT NULL,
+  title      VARCHAR(120) NOT NULL,
+  detail     TEXT        NOT NULL,
+  enabled    BOOLEAN     NOT NULL DEFAULT TRUE,
+  granted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, code)
+);
+CREATE INDEX IF NOT EXISTS rights_user_idx ON rights_grants (user_id);
+
+-- =========================================================
+-- IP 共创社区（Reddit 模式）
+-- =========================================================
+
+-- 社区本体：一个 IP、创作主题或创作者小组对应一个社区。
+CREATE TABLE IF NOT EXISTS communities (
+  id              BIGSERIAL PRIMARY KEY,
+  slug            VARCHAR(48)  NOT NULL UNIQUE,
+  name            VARCHAR(60)  NOT NULL,
+  description     VARCHAR(280) NOT NULL,
+  category        VARCHAR(32)  NOT NULL,
+  icon_text       VARCHAR(4)   NOT NULL DEFAULT '',
+  accent          TEXT         NOT NULL DEFAULT '',
+  banner          TEXT         NOT NULL DEFAULT '',
+  creator_id      BIGINT       REFERENCES users(id) ON DELETE SET NULL,
+  member_count    BIGINT       NOT NULL DEFAULT 0 CHECK (member_count >= 0),
+  post_count      BIGINT       NOT NULL DEFAULT 0 CHECK (post_count >= 0),
+  is_featured     BOOLEAN      NOT NULL DEFAULT FALSE,
+  is_archived     BOOLEAN      NOT NULL DEFAULT FALSE,
+  created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS communities_category_idx ON communities (category, created_at DESC);
+CREATE INDEX IF NOT EXISTS communities_featured_idx ON communities (is_featured, created_at DESC);
+CREATE INDEX IF NOT EXISTS communities_creator_idx ON communities (creator_id);
+
+-- 成员关系：角色可以扩展为 member / moderator / owner。
+CREATE TABLE IF NOT EXISTS community_members (
+  community_id    BIGINT       NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
+  user_id         BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role            VARCHAR(16)  NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'moderator', 'owner')),
+  joined_at       TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  PRIMARY KEY (community_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS community_members_user_idx ON community_members (user_id, joined_at DESC);
+
+-- 共创讨论帖。adoption_status 为创作者采纳流转提供结构化状态。
+CREATE TABLE IF NOT EXISTS community_posts (
+  id                BIGSERIAL PRIMARY KEY,
+  community_id      BIGINT       NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
+  author_id         BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title             VARCHAR(160) NOT NULL,
+  body              TEXT         NOT NULL,
+  category          VARCHAR(32)  NOT NULL DEFAULT '灵感征集',
+  tags              TEXT[]       NOT NULL DEFAULT '{}',
+  status            VARCHAR(16)  NOT NULL DEFAULT 'published' CHECK (status IN ('published', 'hidden', 'locked', 'deleted')),
+  is_pinned         BOOLEAN      NOT NULL DEFAULT FALSE,
+  is_featured       BOOLEAN      NOT NULL DEFAULT FALSE,
+  adoption_status   VARCHAR(24)  NOT NULL DEFAULT 'none' CHECK (adoption_status IN ('none', 'reviewing', 'adopted', 'in_production', 'declined')),
+  adoption_note     TEXT         NOT NULL DEFAULT '',
+  vote_score        INTEGER      NOT NULL DEFAULT 0,
+  comment_count     INTEGER      NOT NULL DEFAULT 0 CHECK (comment_count >= 0),
+  view_count        BIGINT       NOT NULL DEFAULT 0 CHECK (view_count >= 0),
+  created_at        TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  updated_at        TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS community_posts_feed_idx ON community_posts (community_id, status, is_pinned DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS community_posts_hot_idx ON community_posts (community_id, status, vote_score DESC, comment_count DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS community_posts_author_idx ON community_posts (author_id, created_at DESC);
+
+-- 每位成员对每个帖子最多保留一票；direction=1/-1。
+CREATE TABLE IF NOT EXISTS community_post_votes (
+  post_id         BIGINT      NOT NULL REFERENCES community_posts(id) ON DELETE CASCADE,
+  user_id         BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  direction       SMALLINT    NOT NULL CHECK (direction IN (-1, 1)),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (post_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS community_post_votes_user_idx ON community_post_votes (user_id, updated_at DESC);
+
+-- 嵌套评论。parent_id 为空时是一级评论；应用层保证父评论属于同一帖子。
+CREATE TABLE IF NOT EXISTS community_comments (
+  id              BIGSERIAL PRIMARY KEY,
+  post_id         BIGINT      NOT NULL REFERENCES community_posts(id) ON DELETE CASCADE,
+  parent_id       BIGINT      REFERENCES community_comments(id) ON DELETE CASCADE,
+  author_id       BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body            TEXT        NOT NULL,
+  status          VARCHAR(16) NOT NULL DEFAULT 'visible' CHECK (status IN ('visible', 'hidden', 'deleted')),
+  vote_score      INTEGER     NOT NULL DEFAULT 0,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS community_comments_post_idx ON community_comments (post_id, status, created_at ASC);
+CREATE INDEX IF NOT EXISTS community_comments_parent_idx ON community_comments (parent_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS community_comments_author_idx ON community_comments (author_id, created_at DESC);

@@ -39,7 +39,7 @@ export function RegisterPage() {
       <div className="hero-copy auth-copy">
         <span className="eyebrow">创建账号</span>
         <h1>注册一个 kakukaku 创作人账号。</h1>
-        <p>注册后可以发起 IP 众筹计划、用 token 支持别人、把创作台/收藏/历史同步到服务端。</p>
+        <p>注册后可以发起 IP 共创计划、用 token 支持别人、把创作台/收藏/历史同步到服务端。</p>
         <div className="auth-benefits">
           <div>
             <strong>同步创作进度</strong>
@@ -50,8 +50,8 @@ export function RegisterPage() {
             <p>支持档位、获得分成、进入共创者榜单。</p>
           </div>
           <div>
-            <strong>发起众筹</strong>
-            <p>用 IP 工坊预算一键发起属于自己的众筹计划。</p>
+            <strong>发起共创</strong>
+            <p>用 IP 工坊预算一键发起属于自己的共创计划。</p>
           </div>
         </div>
       </div>

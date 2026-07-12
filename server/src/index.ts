@@ -5,6 +5,13 @@ import { authRouter } from './routes/auth'
 import { crowdfundRouter } from './routes/crowdfund'
 import { ordersRouter } from './routes/orders'
 import { paymentsRouter } from './routes/payments'
+import { videosRouter } from './routes/videos'
+import { creatorRouter } from './routes/creator'
+import { interactionsRouter } from './routes/interactions'
+import { fansRouter } from './routes/fans'
+import { revenueRouter } from './routes/revenue'
+import { growthRouter } from './routes/growth'
+import { rightsRouter } from './routes/rights'
 
 const app = express()
 
@@ -20,6 +27,13 @@ app.use('/api/auth', authRouter)
 app.use('/api', crowdfundRouter)
 app.use('/api', ordersRouter)
 app.use('/api', paymentsRouter)
+app.use('/api', videosRouter)
+app.use('/api', creatorRouter)
+app.use('/api', interactionsRouter)
+app.use('/api', fansRouter)
+app.use('/api', revenueRouter)
+app.use('/api', growthRouter)
+app.use('/api', rightsRouter)
 
 app.use(async (error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const message = error instanceof Error ? error.message : String(error)
@@ -34,7 +48,7 @@ async function shutdown() {
 process.on('SIGINT', shutdown)
 process.on('SIGTERM', shutdown)
 
-const port = Number(process.env.PORT ?? 3000)
+const port = Number(process.env.PORT ?? 6002)
 app.listen(port, () => {
   console.log(`kakukaku server listening on http://localhost:${port}`)
 })

@@ -171,7 +171,7 @@ export function PaymentModal({ draft, open, onClose, onPaid }: Props) {
             {paid ? (
               <div className="cf-modal-success">
                 <h3>支付成功！</h3>
-                <p>感谢共创，token 已经写入众筹。</p>
+                <p>感谢共创，token 已经写入共创。</p>
               </div>
             ) : showPayRedirect ? (
               <div className="cf-modal-redirect">

@@ -64,7 +64,7 @@ export function CampaignDetail() {
           <div className="empty-state">
             <h3>{error}</h3>
             <Link className="ghost-button small-button" to="/crowdfund" style={{ marginTop: '1rem', display: 'inline-block' }}>
-              返回众筹列表
+              返回共创列表
             </Link>
           </div>
         </section>
@@ -131,7 +131,7 @@ export function CampaignDetail() {
           <div className="section-heading top-gap">
             <div>
               <span className="section-kicker">Token 去向</span>
-              <h2>众筹到的 token 怎么花</h2>
+              <h2>共创到的 token 怎么花</h2>
             </div>
           </div>
           <div className="cf-tokenplan">

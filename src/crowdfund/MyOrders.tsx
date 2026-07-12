@@ -123,7 +123,7 @@ export function MyOrders() {
       <section className="section-block">
         <span className="section-kicker">我的订单</span>
         <h1 style={{ margin: '0.6rem 0', fontSize: 'clamp(1.8rem, 3vw, 2.6rem)', color: '#16182f' }}>
-          众筹订单与退款
+          共创订单与退款
         </h1>
         <p style={{ margin: 0, color: '#5c6478', lineHeight: 1.7, maxWidth: '64ch' }}>
           关闭未支付订单、退款已支付订单。退款会同步把 Pledge 与项目累积分成退回。
@@ -142,7 +142,7 @@ export function MyOrders() {
         ) : orders.length === 0 ? (
           <div className="empty-state">
             <h3>你还没有订单</h3>
-            <p>去 <Link to="/crowdfund">众筹列表</Link> 支持一个 IP 计划吧。</p>
+            <p>去 <Link to="/crowdfund">共创列表</Link> 支持一个 IP 计划吧。</p>
           </div>
         ) : (
           <div className="cf-order-list">

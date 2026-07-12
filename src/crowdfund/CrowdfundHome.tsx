@@ -50,20 +50,20 @@ export function CrowdfundHome() {
     <AppShell>
       <section className="cf-hero">
         <div className="cf-badge-row">
-          <span className="cf-pill">AIGC 共创众筹</span>
+          <span className="cf-pill">AIGC 共创</span>
           <span className="cf-pill">帮助创作人快速打造 IP</span>
           <span className="cf-pill">共享算力 · 降低 token 成本</span>
         </div>
-        <h1>把灵感众筹成 IP，让好创意不再被算力劝退。</h1>
+        <h1>把灵感共创成 IP，让好创意不再被算力劝退。</h1>
         <p>
-          粉丝用 token 众筹支持你心中的 IP，资金汇入共享算力池后批量生成，单次打造的成本显著下降。从角色设定到成片，一个人也能跑完一条 IP 生产线。
+          粉丝用 token 共创支持你心中的 IP，资金汇入共享算力池后批量生成，单次打造的成本显著下降。从角色设定到成片，一个人也能跑完一条 IP 生产线。
         </p>
         <div className="cf-hero-actions">
           <Link className="primary-button" to="/crowdfund">
-            浏览众筹项目
+            浏览共创项目
           </Link>
-          <Link className="ghost-button" to="/ip-studio">
-            进入 IP 工坊
+          <Link className="ghost-button" to="/communities">
+            浏览共创社区
           </Link>
         </div>
       </section>
@@ -81,7 +81,7 @@ export function CrowdfundHome() {
       <section className="section-block" style={{ marginTop: '1.5rem' }}>
         <div className="section-heading">
           <div>
-            <span className="section-kicker">正在众筹</span>
+            <span className="section-kicker">正在共创</span>
             <h2>为你精选的 IP 孵化计划</h2>
           </div>
           <Link className="ghost-button small-button" to="/crowdfund/create">
@@ -89,7 +89,7 @@ export function CrowdfundHome() {
           </Link>
         </div>
         {loading ? (
-          <div className="empty-state"><h3>正在加载众筹项目…</h3></div>
+          <div className="empty-state"><h3>正在加载共创项目…</h3></div>
         ) : error ? (
           <div className="empty-state">
             <h3>{error}</h3>
@@ -97,7 +97,7 @@ export function CrowdfundHome() {
           </div>
         ) : campaigns.length === 0 ? (
           <div className="empty-state">
-            <h3>暂时还没有众筹项目</h3>
+            <h3>暂时还没有共创项目</h3>
             <p>成为第一个发起 IP 计划的创作人吧。</p>
           </div>
         ) : (
@@ -131,7 +131,7 @@ export function CrowdfundHome() {
         <div className="section-heading">
           <div>
             <span className="section-kicker">为什么更省</span>
-            <h2>众筹如何降低 token 成本</h2>
+            <h2>共创如何降低 token 成本</h2>
           </div>
         </div>
         <div className="cf-reasons">
@@ -147,14 +147,14 @@ export function CrowdfundHome() {
       <section className="cf-cta-band">
         <div>
           <h2>想好要做什么 IP 了吗？</h2>
-          <p>先用 IP 工坊估算 token 预算，再一键发起属于你的众筹计划。</p>
+          <p>先用 IP 工坊估算 token 预算，再一键发起属于你的共创计划。</p>
         </div>
         <div className="cf-hero-actions">
           <Link className="primary-button" to="/ip-studio">
             估算我的 IP 预算
           </Link>
           <Link className="ghost-button" to={user ? '/crowdfund/create' : '/login'}>
-            {user ? '立即发起众筹' : '登录后发起'}
+            {user ? '立即发起共创' : '登录后发起'}
           </Link>
         </div>
       </section>

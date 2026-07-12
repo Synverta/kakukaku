@@ -82,13 +82,13 @@ export function LaunchCampaign() {
       <AppShell>
         <section className="cf-success">
           <h2>IP 计划已发起！</h2>
-          <p>它已经出现在众筹列表里，粉丝可以用 token 支持你，平台批量生成会帮你把成本降下来。</p>
+          <p>它已经出现在共创列表里，粉丝可以用 token 支持你，平台批量生成会帮你把成本降下来。</p>
           <div className="cf-hero-actions" style={{ justifyContent: 'center' }}>
             <Link className="primary-button" to={`/crowdfund/project/${createdCampaign.id}`}>
               查看我的计划
             </Link>
             <Link className="ghost-button" to="/crowdfund">
-              回到众筹列表
+              回到共创列表
             </Link>
           </div>
         </section>
@@ -109,7 +109,7 @@ export function LaunchCampaign() {
         title: title.trim() || '未命名 IP 计划',
         creator: creator.trim() || user.username,
         category,
-        summary: summary.trim() || '一个正在众筹支持的 AIGC IP 计划。',
+        summary: summary.trim() || '一个正在共创支持的 AIGC IP 计划。',
         cover: COVER_PALETTE[Math.floor(Math.random() * COVER_PALETTE.length)],
         goalTokens: safeGoal,
         description: description.trim() || summary.trim() || '这个 IP 计划还在起步阶段，欢迎用 token 支持它长大。',
@@ -142,7 +142,7 @@ export function LaunchCampaign() {
   return (
     <AppShell>
       <section className="section-block">
-        <span className="section-kicker">发起众筹</span>
+        <span className="section-kicker">发起共创</span>
         <h1 style={{ margin: '0.6rem 0', fontSize: 'clamp(1.8rem, 3vw, 2.6rem)', color: '#16182f' }}>
           发起你的 AIGC IP 计划
         </h1>
@@ -200,7 +200,7 @@ export function LaunchCampaign() {
             {error ? <div className="auth-error">{error}</div> : null}
             <div className="full-span cf-publish-row">
               <button type="submit" className="primary" disabled={submitting}>
-                {submitting ? '正在发起…' : '发起众筹计划'}
+                {submitting ? '正在发起…' : '发起共创计划'}
               </button>
               <button type="button" className="ghost" onClick={() => navigate('/crowdfund')}>
                 取消

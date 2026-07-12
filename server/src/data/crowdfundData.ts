@@ -44,7 +44,7 @@ export const campaigns: Campaign[] = [
     creator: '像素电波',
     creatorAvatar: '像',
     category: '虚拟偶像',
-    summary: '一只住在霓虹数据港的猫娘偶像，用众筹 token 完成 Live2D 形象、首支 PV 与专属语音。',
+    summary: '一只住在霓虹数据港的猫娘偶像，用共创 token 完成 Live2D 形象、首支 PV 与专属语音。',
     cover: 'linear-gradient(135deg, rgba(241,71,111,0.95) 0%, rgba(255,168,133,0.92) 46%, rgba(28,18,65,0.96) 100%)',
     goalTokens: 3000000,
     raisedTokens: 2140000,
@@ -52,7 +52,7 @@ export const campaigns: Campaign[] = [
     daysLeft: 12,
     tags: ['虚拟偶像', 'Live2D', '音乐'],
     description:
-      '“喵电波”是一个面向 Z 世代的赛博猫娘偶像 IP。我们希望用众筹到的 token 完成角色基座模型微调、一套可动的 Live2D 形象、首支 PV 与可商用的专属语音。越早期的 supporters 越能参与猫娘的性格设定、代表色与出道单曲的投票。',
+      '“喵电波”是一个面向 Z 世代的赛博猫娘偶像 IP。我们希望用共创到的 token 完成角色基座模型微调、一套可动的 Live2D 形象、首支 PV 与可商用的专属语音。越早期的 supporters 越能参与猫娘的性格设定、代表色与出道单曲的投票。',
     tokenPlan: [
       { label: '角色基座模型微调', percent: 35 },
       { label: '立绘与表情包', percent: 25 },
@@ -101,7 +101,7 @@ export const campaigns: Campaign[] = [
     creator: '慢炖工作室',
     creatorAvatar: '慢',
     category: '动画',
-    summary: '一家开在云上的小馆，用众筹 token 把治愈系村庄做成短片系列与可互动场景。',
+    summary: '一家开在云上的小馆，用共创 token 把治愈系村庄做成短片系列与可互动场景。',
     cover: 'linear-gradient(135deg, rgba(6,214,160,0.95) 0%, rgba(171,240,200,0.92) 46%, rgba(22,54,92,0.96) 100%)',
     goalTokens: 2400000,
     raisedTokens: 1980000,
@@ -109,7 +109,7 @@ export const campaigns: Campaign[] = [
     daysLeft: 6,
     tags: ['治愈', '动画', '陪伴'],
     description:
-      '“云栖小馆”是一个慢节奏治愈 IP：一家只有云朵客人的小馆，每集讲一个被生活压垮的客人如何被一顿饭治愈。众筹 token 将用于短片系列、可互动 3D 场景与一套温暖的角色表情。',
+      '“云栖小馆”是一个慢节奏治愈 IP：一家只有云朵客人的小馆，每集讲一个被生活压垮的客人如何被一顿饭治愈。共创 token 将用于短片系列、可互动 3D 场景与一套温暖的角色表情。',
     tokenPlan: [
       { label: '短片系列生成', percent: 40 },
       { label: '角色与场景原画', percent: 28 },
@@ -151,7 +151,7 @@ export const campaigns: Campaign[] = [
     creator: '黑键推理',
     creatorAvatar: '黑',
     category: '互动剧',
-    summary: '一座终年起雾的港口城市，用众筹 token 做成可分支选择的互动推理剧。',
+    summary: '一座终年起雾的港口城市，用共创 token 做成可分支选择的互动推理剧。',
     cover: 'linear-gradient(135deg, rgba(87,117,144,0.96) 0%, rgba(176,196,222,0.92) 46%, rgba(25,33,48,0.96) 100%)',
     goalTokens: 4200000,
     raisedTokens: 880000,
@@ -159,7 +159,7 @@ export const campaigns: Campaign[] = [
     daysLeft: 21,
     tags: ['悬疑', '互动剧', '剧情'],
     description:
-      '“雾港档案”是一部可分支选择的互动推理 IP。每一集都提供多个调查方向，观众的选择会改变真相。众筹 token 用于剧本大模型微调、分镜与多结局短视频生成，以及一套雾港城市音色。',
+      '“雾港档案”是一部可分支选择的互动推理 IP。每一集都提供多个调查方向，观众的选择会改变真相。共创 token 用于剧本大模型微调、分镜与多结局短视频生成，以及一套雾港城市音色。',
     tokenPlan: [
       { label: '剧本与分支大模型', percent: 38 },
       { label: '分镜与短视频', percent: 30 },
@@ -201,7 +201,7 @@ export const campaigns: Campaign[] = [
     creator: '青简动画',
     creatorAvatar: '青',
     category: '动画',
-    summary: '从《山海经》里拾取妖兽与仙人，用众筹 token 做成国风动画短片合集。',
+    summary: '从《山海经》里拾取妖兽与仙人，用共创 token 做成国风动画短片合集。',
     cover: 'linear-gradient(135deg, rgba(131,56,236,0.95) 0%, rgba(255,119,199,0.9) 46%, rgba(28,18,65,0.96) 100%)',
     goalTokens: 5000000,
     raisedTokens: 3600000,
@@ -209,7 +209,7 @@ export const campaigns: Campaign[] = [
     daysLeft: 9,
     tags: ['国风', '仙侠', '动画'],
     description:
-      '“山海拾遗”把《山海经》里的妖兽与仙人重新讲成现代国风短片。众筹 token 用于国风基座模型微调、角色设定集、短片与一套可商用国风音色，让小团队也能做出电影感画面。',
+      '“山海拾遗”把《山海经》里的妖兽与仙人重新讲成现代国风短片。共创 token 用于国风基座模型微调、角色设定集、短片与一套可商用国风音色，让小团队也能做出电影感画面。',
     tokenPlan: [
       { label: '国风基座模型微调', percent: 34 },
       { label: '角色设定集与原画', percent: 26 },
@@ -251,7 +251,7 @@ export const campaigns: Campaign[] = [
     creator: '硬核小作坊',
     creatorAvatar: '硬',
     category: '玩具 / 短片',
-    summary: '一只用废零件拼出来的机甲小狗，用众筹 token 做成短片与可打印 3D 模型。',
+    summary: '一只用废零件拼出来的机甲小狗，用共创 token 做成短片与可打印 3D 模型。',
     cover: 'linear-gradient(135deg, rgba(76,201,240,0.96) 0%, rgba(171,240,255,0.92) 46%, rgba(22,54,92,0.96) 100%)',
     goalTokens: 1800000,
     raisedTokens: 1720000,
@@ -259,7 +259,7 @@ export const campaigns: Campaign[] = [
     daysLeft: 3,
     tags: ['机甲', '萌宠', '3D'],
     description:
-      '“齿轮小狗”是一只由废零件拼装的机甲萌宠，既有短片也有可打印的 3D 模型。众筹 token 用于角色设定、短片、表情包与一份开源 3D 打印文件，让粉丝也能在家拼出自己的小狗。',
+      '“齿轮小狗”是一只由废零件拼装的机甲萌宠，既有短片也有可打印的 3D 模型。共创 token 用于角色设定、短片、表情包与一份开源 3D 打印文件，让粉丝也能在家拼出自己的小狗。',
     tokenPlan: [
       { label: '角色设定与短片', percent: 42 },
       { label: '表情包与贴纸', percent: 22 },
@@ -301,7 +301,7 @@ export const campaigns: Campaign[] = [
     creator: '耳机公园',
     creatorAvatar: '耳',
     category: '音乐 / 陪伴',
-    summary: '一只只在深夜出现的幽灵 DJ，用众筹 token 做成 Lo-fi 陪伴电台与专属音色。',
+    summary: '一只只在深夜出现的幽灵 DJ，用共创 token 做成 Lo-fi 陪伴电台与专属音色。',
     cover: 'linear-gradient(135deg, rgba(128,237,153,0.94) 0%, rgba(56,176,0,0.9) 46%, rgba(20,40,30,0.96) 100%)',
     goalTokens: 1500000,
     raisedTokens: 640000,
@@ -309,7 +309,7 @@ export const campaigns: Campaign[] = [
     daysLeft: 18,
     tags: ['Lo-fi', '音乐', '陪伴'],
     description:
-      '“晚安电台”是一只只在深夜出现的幽灵 DJ，用 Lo-fi 节拍陪你入睡。众筹 token 用于专属音色合成、每周更新的陪伴短片与一套助眠视觉，让一个人睡也不孤单。',
+      '“晚安电台”是一只只在深夜出现的幽灵 DJ，用 Lo-fi 节拍陪你入睡。共创 token 用于专属音色合成、每周更新的陪伴短片与一套助眠视觉，让一个人睡也不孤单。',
     tokenPlan: [
       { label: '专属音色合成', percent: 36 },
       { label: '陪伴短片生成', percent: 32 },

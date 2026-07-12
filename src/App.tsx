@@ -14,20 +14,35 @@ import './App.css'
 import { CrowdfundHome } from './crowdfund/CrowdfundHome'
 import { CampaignDetail } from './crowdfund/CampaignDetail'
 import { IpStudio } from './crowdfund/IpStudio'
+import { CommunityHome } from './crowdfund/CommunityHome'
 import { LaunchCampaign } from './crowdfund/LaunchCampaign'
 import { MyOrders } from './crowdfund/MyOrders'
 import { RegisterPage } from './pages/RegisterPage'
+import { CreatorShell } from './creator/CreatorShell'
+import { DashboardPage } from './creator/DashboardPage'
+import { WorksPage } from './creator/WorksPage'
+import { PublishPage } from './creator/PublishPage'
+import { AnalyticsPage } from './creator/AnalyticsPage'
+import { VideoDetailPage } from './creator/VideoDetailPage'
+import { CommentsPage } from './creator/CommentsPage'
+import { DanmakuPage } from './creator/DanmakuPage'
+import { FansPage } from './creator/FansPage'
+import { RevenuePage } from './creator/RevenuePage'
+import { GrowthPage } from './creator/GrowthPage'
+import { RightsPage } from './creator/RightsPage'
+import { ContentTypePage } from './creator/ContentTypePage'
+import { PeanutPage } from './creator/PeanutPage'
+import { UpdreamPage } from './creator/UpdreamPage'
+import { PromotePage } from './creator/PromotePage'
+import { AcademyPage } from './creator/AcademyPage'
 import { useAuth } from './lib/auth'
 import {
   categories,
   comments,
   danmakuSeedsByVideo,
-  liveMoments,
-  liveStreams,
   navigationItems,
   profileStats,
   studioCards,
-  uploadChecklist,
   videos,
 } from './data/siteData'
 
@@ -35,6 +50,9 @@ type CommentEntry = {
   user: string
   time: string
   content: string
+  role?: 'mod' | 'creator' | 'member'
+  replyTo?: string
+  replyContent?: string
 }
 
 type DanmakuEntry = {
@@ -235,11 +253,9 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/rank" element={<RankPage />} />
-        <Route path="/live" element={<LivePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/upload" element={<UploadPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/video/:videoId" element={<VideoPage />} />
         <Route path="/crowdfund" element={<CrowdfundHome />} />
@@ -247,6 +263,28 @@ function App() {
         <Route path="/crowdfund/create" element={<LaunchCampaign />} />
         <Route path="/my-orders" element={<MyOrders />} />
         <Route path="/ip-studio" element={<IpStudio />} />
+        <Route path="/communities" element={<CommunityHome />} />
+        <Route path="/creator" element={<CreatorShell />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="works" element={<WorksPage />} />
+          <Route path="works/:id" element={<VideoDetailPage />} />
+          <Route path="publish" element={<PublishPage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="interactions" element={<Navigate to="interactions/comments" replace />} />
+          <Route path="interactions/comments" element={<CommentsPage />} />
+          <Route path="interactions/danmaku" element={<DanmakuPage />} />
+          <Route path="fans" element={<FansPage />} />
+          <Route path="revenue" element={<RevenuePage />} />
+          <Route path="growth" element={<Navigate to="growth/missions" replace />} />
+          <Route path="growth/missions" element={<GrowthPage />} />
+          <Route path="growth/promote" element={<PromotePage />} />
+          <Route path="growth/academy" element={<AcademyPage />} />
+          <Route path="rights" element={<RightsPage />} />
+          <Route path="content/:type" element={<ContentTypePage />} />
+          <Route path="peanut" element={<PeanutPage />} />
+          <Route path="updream" element={<UpdreamPage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </UserStateContext.Provider>
@@ -254,7 +292,6 @@ function App() {
 }
 
 function HomePage() {
-  const { historyVideoIds } = useUserState()
   const [searchParams, setSearchParams] = useSearchParams()
   const featuredVideo = videos[0]
   const ranking = [...videos].sort((left, right) => parseCompactNumber(right.views) - parseCompactNumber(left.views)).slice(0, 5)
@@ -270,19 +307,10 @@ function HomePage() {
     return matchesCategory && matchesQuery
   })
   const heroRecommendations = sourceVideos.filter((video) => video.id !== featuredVideo.id).slice(0, 6)
-  const continueWatching = historyVideoIds
-    .map((videoId) => videos.find((video) => video.id === videoId))
-    .filter((video): video is (typeof videos)[number] => Boolean(video))
-    .slice(0, 3)
   const shelfVideos = filteredVideos.slice(0, 8)
   const animeChannelVideos = videos.filter((video) => ['动画', '音乐', '鬼畜'].includes(video.category)).slice(0, 6)
   const learningChannelVideos = videos.filter((video) => ['知识', '科技', '纪录片', '影视'].includes(video.category)).slice(0, 6)
   const latestDropVideos = [...videos].sort((left, right) => parseTimeRank(left.publishedAt) - parseTimeRank(right.publishedAt)).slice(0, 3)
-  const creatorBoostCards = [
-    { label: '新人保护', value: '72h', detail: '新稿件进入冷启动观察池，先看完播与互动质量。' },
-    { label: '收益透明', value: '4 项', detail: '播放、充电、商单、直播收入拆分展示。' },
-    { label: '互动工具', value: '弹幕 / 评论', detail: '创作者可导出弹幕、配置屏蔽词和置顶讨论。' },
-  ]
   const creatorSpotlightVideos = [...videos].sort((left, right) => parseTimeRank(left.publishedAt) - parseTimeRank(right.publishedAt)).slice(0, 4)
   const isDefaultHomepage = selectedCategory === '为你推荐' && deferredQuery.length === 0
 
@@ -328,38 +356,16 @@ function HomePage() {
 
       <section className="cf-home-promo">
         <div>
-          <strong>AIGC 共创众筹 · 帮助创作人快速打造 IP</strong>
+          <strong>AIGC 共创 · 帮助创作人快速打造 IP</strong>
           <p>粉丝用 token 支持你心中的 IP，平台批量生成把单次打造的成本打下来。从角色设定到成片，一个人也能跑完一条 IP 生产线。</p>
         </div>
         <div className="cf-hero-actions">
           <Link className="primary-button" to="/crowdfund">
-            浏览众筹项目
+            浏览共创项目
           </Link>
           <Link className="ghost-button" to="/ip-studio">
             进入 IP 工坊
           </Link>
-        </div>
-      </section>
-
-      <section className="creator-command-grid" aria-label="创作者友好能力">
-        <div className="creator-command-panel">
-          <div>
-            <span className="section-kicker">Creator First</span>
-            <h2>不只推荐内容，也帮创作者看见增长路径。</h2>
-            <p>首页保留视频站该有的密集内容流，同时把投稿、数据、互动治理和新人保护做成可见入口。</p>
-          </div>
-          <Link className="primary-button" to="/upload">
-            进入创作中心
-          </Link>
-        </div>
-        <div className="creator-boost-grid">
-          {creatorBoostCards.map((card) => (
-            <article key={card.label} className="creator-boost-card">
-              <span>{card.label}</span>
-              <strong>{card.value}</strong>
-              <p>{card.detail}</p>
-            </article>
-          ))}
         </div>
       </section>
 
@@ -439,25 +445,6 @@ function HomePage() {
         </div>
       </section>
 
-      {isDefaultHomepage && continueWatching.length > 0 ? (
-        <section className="section-block homepage-feed-section">
-          <div className="section-heading">
-            <div>
-              <span className="section-kicker">继续观看</span>
-              <h2>接着看</h2>
-            </div>
-            <Link className="section-link" to="/history">
-              历史记录
-            </Link>
-          </div>
-          <div className="video-grid video-grid-compact">
-            {continueWatching.map((video) => (
-              <VideoCard key={video.id} videoId={video.id} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
       {isDefaultHomepage ? (
         <>
           <section className="section-block creator-lab-section">
@@ -505,9 +492,9 @@ function HomePage() {
                 {latestDropVideos.map((video) => (
                   <CompactVideoCard key={video.id} videoId={video.id} />
                 ))}
-              </div>
-            </div>
-          </section>
+          </div>
+        </div>
+      </section>
 
           <section className="section-block homepage-feed-section">
             <div className="section-heading">
@@ -525,20 +512,6 @@ function HomePage() {
                   <VideoCard key={video.id} videoId={video.id} />
                 ))}
               </div>
-              <div className="secondary-side-stack live-side-stack">
-                {liveStreams.map((stream) => (
-                  <article key={stream.id} className="live-card homepage-live-card">
-                    <div className="live-preview" style={{ background: stream.accent }} />
-                    <div>
-                      <strong>{stream.title}</strong>
-                      <p>{stream.streamer}</p>
-                      <span>
-                        {stream.topic} · {stream.viewers} 观看
-                      </span>
-                    </div>
-                  </article>
-                ))}
-              </div>
             </div>
           </section>
         </>
@@ -549,7 +522,9 @@ function HomePage() {
 
 function HistoryPage() {
   const { favoriteVideoIds, historyVideoIds } = useUserState()
-  const historyVideos = historyVideoIds.map((videoId) => videos.find((video) => video.id === videoId)).filter(Boolean)
+  const historyVideos = historyVideoIds
+    .map((videoId) => videos.find((video) => video.id === videoId))
+    .filter((video): video is (typeof videos)[number] => Boolean(video))
 
   return (
     <AppShell>
@@ -584,29 +559,21 @@ function HistoryPage() {
             </div>
           </div>
           <div className="history-list">
-            {historyVideos.map((video, index) => {
-              if (!video) {
-                return null
-              }
-
-              const progress = Math.min(93, 18 + index * 11)
-
-              return (
-                <Link key={video.id} className="history-item" to={`/video/${video.id}`}>
-                  <div className="history-cover" style={{ background: video.cover }} />
-                  <div className="history-copy">
-                    <strong>{video.title}</strong>
-                    <p>{video.description}</p>
-                    <span>
-                      {video.creator} · {video.views} 播放 · 上次看到 {progress}%
-                    </span>
-                    <div className="progress-rail">
-                      <span style={{ width: `${progress}%` }} />
-                    </div>
+            {historyVideos.map((video, index) => (
+              <Link key={video.id} className="history-item" to={`/video/${video.id}`}>
+                <div className="history-cover" style={{ background: video.cover }} />
+                <div className="history-copy">
+                  <strong>{video.title}</strong>
+                  <p>{video.description}</p>
+                  <span>
+                    {video.creator} · {video.views} 播放 · 上次看到 {Math.min(93, 18 + index * 11)}%
+                  </span>
+                  <div className="progress-rail">
+                    <span style={{ width: `${Math.min(93, 18 + index * 11)}%` }} />
                   </div>
-                </Link>
-              )
-            })}
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
 
@@ -618,13 +585,16 @@ function HistoryPage() {
                 <h2>已标记视频</h2>
               </div>
             </div>
-            <div className="quick-link-list">
+            <div className="video-grid">
               {videos
                 .filter((video) => favoriteVideoIds.includes(video.id))
                 .map((video) => (
-                  <Link key={video.id} className="quick-link-card" to={`/video/${video.id}`}>
-                    <strong>{video.title}</strong>
-                    <span>{video.creator}</span>
+                  <Link key={video.id} className="history-item" to={`/video/${video.id}`}>
+                    <div className="history-cover" style={{ background: video.cover }} />
+                    <div className="history-copy">
+                      <strong>{video.title}</strong>
+                      <span>{video.creator} · {video.views}</span>
+                    </div>
                   </Link>
                 ))}
             </div>
@@ -636,181 +606,32 @@ function HistoryPage() {
 }
 
 function RankPage() {
-  const rankedVideos = [...videos].sort((left, right) => parseCompactNumber(right.views) - parseCompactNumber(left.views))
-  const trendingTags = Array.from(new Set(videos.flatMap((video) => video.tags))).slice(0, 10)
+  const ranking = [...videos]
+    .sort((left, right) => parseCompactNumber(right.views) - parseCompactNumber(left.views))
+    .slice(0, 20)
 
   return (
     <AppShell>
       <section className="section-block ranking-hero">
         <div>
-          <span className="eyebrow">全站排行榜</span>
-          <h1>把播放、互动和讨论密度压成一张榜单。</h1>
-          <p>这里模拟了 B 站常见的全站热榜视图，方便你继续扩展日榜、周榜、分区榜和专题榜。</p>
-        </div>
-        <div className="hero-metrics">
-          <div>
-            <dt>榜单刷新</dt>
-            <dd>10 分钟</dd>
-          </div>
-          <div>
-            <dt>上榜视频</dt>
-            <dd>{rankedVideos.length}</dd>
-          </div>
-          <div>
-            <dt>热门标签</dt>
-            <dd>{trendingTags.length}</dd>
-          </div>
+          <span className="eyebrow">排行榜</span>
+          <h1>站内综合热度榜，按播放量排序。</h1>
+          <p>展示站内综合热度前列的作品，模拟真实排行榜前 20 位。</p>
         </div>
       </section>
-
-      <div className="content-grid rank-layout">
-        <section className="section-block">
-          <div className="section-heading">
+      <div className="ranking-list">
+        {ranking.map((video, index) => (
+          <Link key={video.id} className="ranking-item" to={`/video/${video.id}`}>
+            <span className="ranking-index">{String(index + 1).padStart(2, '0')}</span>
             <div>
-              <span className="section-kicker">总榜</span>
-              <h2>本周综合热视频</h2>
+              <strong>{video.title}</strong>
+              <span>
+                {video.creator} · {video.views} 播放 · {video.category}
+              </span>
             </div>
-          </div>
-          <div className="rank-board">
-            {rankedVideos.map((video, index) => (
-              <Link key={video.id} className="rank-board-item" to={`/video/${video.id}`}>
-                <span className="rank-board-index">#{index + 1}</span>
-                <div className="rank-board-cover" style={{ background: video.cover }} />
-                <div className="rank-board-copy">
-                  <strong>{video.title}</strong>
-                  <p>{video.description}</p>
-                  <span>
-                    {video.creator} · {video.views} 播放 · {video.likes} 点赞
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <aside className="sidebar-stack">
-          <section className="section-block compact-block">
-            <div className="section-heading">
-              <div>
-                <span className="section-kicker">热词</span>
-                <h2>趋势标签</h2>
-              </div>
-            </div>
-            <div className="tag-cloud">
-              {trendingTags.map((tag) => (
-                <span key={tag} className="tag-chip warm-chip">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </section>
-
-          <section className="section-block compact-block">
-            <div className="section-heading">
-              <div>
-                <span className="section-kicker">看点</span>
-                <h2>今日上升最快</h2>
-              </div>
-            </div>
-            <div className="progress-list">
-              {rankedVideos.slice(0, 3).map((video, index) => (
-                <article key={video.id} className="insight-card">
-                  <strong>{video.title}</strong>
-                  <span>排名上升 {6 - index} 位</span>
-                  <p>{video.category} 分区热度持续上涨。</p>
-                </article>
-              ))}
-            </div>
-          </section>
-        </aside>
+          </Link>
+        ))}
       </div>
-    </AppShell>
-  )
-}
-
-function LivePage() {
-  return (
-    <AppShell>
-      <section className="live-hero">
-        <div className="hero-copy">
-          <span className="eyebrow">直播中心</span>
-          <h1>实时热播、预告日程和创作者互动，集中在一个入口。</h1>
-          <p>这个页面模拟直播频道首页的结构，包括主推直播、直播排期、观众指标和房间瀑布流。</p>
-          <div className="hero-actions">
-            <Link className="primary-button" to="/video/future-city-loop">
-              查看主推内容
-            </Link>
-            <Link className="ghost-button" to="/rank">
-              切到排行榜
-            </Link>
-          </div>
-        </div>
-        <section className="section-block live-schedule-panel">
-          <div className="section-heading">
-            <div>
-              <span className="section-kicker">今晚排期</span>
-              <h2>你可能想蹲的直播</h2>
-            </div>
-          </div>
-          <div className="schedule-list">
-            {liveMoments.map((moment) => (
-              <article key={`${moment.time}-${moment.title}`} className="schedule-item">
-                <strong>{moment.time}</strong>
-                <div>
-                  <p>{moment.title}</p>
-                  <span>
-                    {moment.host} · {moment.label}
-                  </span>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      </section>
-
-      <section className="section-block live-stat-strip">
-        <div>
-          <dt>在线观众</dt>
-          <dd>246.8 万</dd>
-        </div>
-        <div>
-          <dt>弹幕速度</dt>
-          <dd>18,420 / 分</dd>
-        </div>
-        <div>
-          <dt>开播主播</dt>
-          <dd>3,124</dd>
-        </div>
-        <div>
-          <dt>预约提醒</dt>
-          <dd>92.4 万</dd>
-        </div>
-      </section>
-
-      <section className="section-block">
-        <div className="section-heading">
-          <div>
-            <span className="section-kicker">房间推荐</span>
-            <h2>当前最值得点进去的直播间</h2>
-          </div>
-        </div>
-        <div className="live-room-grid">
-          {liveStreams.map((stream, index) => (
-            <article key={stream.id} className="live-room-card">
-              <div className="live-room-stage" style={{ background: stream.accent }}>
-                <span className="badge">NO.{index + 1}</span>
-              </div>
-              <div>
-                <strong>{stream.title}</strong>
-                <p>{stream.streamer}</p>
-                <span>
-                  {stream.topic} · {stream.viewers} 在线
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
     </AppShell>
   )
 }
@@ -842,65 +663,38 @@ function LoginPage() {
   return (
     <AppShell>
       <section className="auth-layout">
-        <div className="hero-copy auth-copy">
-          <span className="eyebrow">账号登录</span>
-          <h1>回到你的追更列表、收藏夹和创作台。</h1>
-          <p>登录后可以同步数据、发起 IP 众筹、用 token 支持别人。</p>
-          <div className="auth-benefits">
-            <div>
-              <strong>同步观看记录</strong>
-              <p>跨设备续播、收藏和稍后再看会自动同步。</p>
-            </div>
-            <div>
-              <strong>参与互动</strong>
-              <p>发送弹幕、评论、点赞和投币都需要登录态。</p>
-            </div>
-            <div>
-              <strong>进入创作中心</strong>
-              <p>登录后可以直接管理稿件、数据和收益面板。</p>
-            </div>
-          </div>
+        <div className="hero-copy auth-copy auth-copy-redesign">
+          <span className="eyebrow">账号登录 · kakukaku</span>
+          <h1>欢迎回来<br />一起继续把作品折成城市。</h1>
+          <p>登录后可以同步数据、发起 IP 共创、用 token 支持别人的创作。</p>
         </div>
-        <section className="section-block auth-panel">
-          <div className="section-heading">
-            <div>
-              <span className="section-kicker">欢迎回来</span>
-              <h2>登录 kakukaku</h2>
-            </div>
-          </div>
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <label>
-              用户名
-              <input
-                autoComplete="username"
-                minLength={3}
-                required
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-              />
-            </label>
-            <label>
-              密码
-              <input
-                autoComplete="current-password"
-                minLength={8}
-                required
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </label>
-            {error ? <div className="auth-error">{error}</div> : null}
-            <button type="submit" className="primary-button full-button" disabled={submitting}>
-              {submitting ? '正在登录…' : '登录并进入个人中心'}
-            </button>
-          </form>
-          <div className="oauth-row">
-            <Link to="/register" className="ghost-button full-button" style={{ display: 'inline-flex' }}>
-              还没账号？去注册
-            </Link>
-          </div>
-        </section>
+        <form className="auth-panel" onSubmit={handleSubmit}>
+          <label>
+            用户名
+            <input
+              required
+              type="text"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+            />
+          </label>
+          <label>
+            密码
+            <input
+              required
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </label>
+          {error ? <div className="creator-error">{error}</div> : null}
+          <button type="submit" disabled={submitting}>
+            {submitting ? '登录中…' : '登录'}
+          </button>
+          <Link className="ghost-button small-button" to="/register">
+            没有账号？注册
+          </Link>
+        </form>
       </section>
     </AppShell>
   )
@@ -908,6 +702,10 @@ function LoginPage() {
 
 function ProfilePage() {
   const { favoriteVideoIds, followedCreators, historyVideoIds } = useUserState()
+  const continueWatching = historyVideoIds
+    .map((videoId) => videos.find((video) => video.id === videoId))
+    .filter((video): video is (typeof videos)[number] => Boolean(video))
+    .slice(0, 3)
 
   return (
     <AppShell>
@@ -934,6 +732,25 @@ function ProfilePage() {
           ))}
         </div>
       </section>
+
+      {continueWatching.length > 0 ? (
+        <section className="section-block">
+          <div className="section-heading">
+            <div>
+              <span className="section-kicker">继续观看</span>
+              <h2>接着看</h2>
+            </div>
+            <Link className="section-link" to="/history">
+              历史记录
+            </Link>
+          </div>
+          <div className="video-grid video-grid-compact">
+            {continueWatching.map((video) => (
+              <VideoCard key={video.id} videoId={video.id} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <div className="content-grid profile-layout">
         <section className="section-block">
@@ -977,7 +794,7 @@ function ProfilePage() {
               <span className="section-kicker">已发布视频</span>
               <h2>最近更新</h2>
             </div>
-            <Link className="ghost-button small-button" to="/upload">
+            <Link className="ghost-button small-button" to="/creator/works">
               去投稿台
             </Link>
           </div>
@@ -997,7 +814,7 @@ function ProfilePage() {
               </div>
             </div>
             <div className="quick-link-list">
-              <Link className="quick-link-card" to="/upload">
+              <Link className="quick-link-card" to="/creator/dashboard">
                 <strong>投稿管理</strong>
                 <span>查看草稿、已过审稿件和发布计划</span>
               </Link>
@@ -1009,12 +826,8 @@ function ProfilePage() {
                 <strong>数据排行</strong>
                 <span>观察作品在站内热榜中的相对位置</span>
               </Link>
-              <Link className="quick-link-card" to="/live">
-                <strong>直播预约</strong>
-                <span>配置直播预告、封面和开播提醒</span>
-              </Link>
               <Link className="quick-link-card" to="/my-orders">
-                <strong>我的众筹订单</strong>
+                <strong>我的共创订单</strong>
                 <span>关闭未支付订单、对已支付订单申请退款</span>
               </Link>
               <article className="quick-link-card static-card">
@@ -1029,134 +842,10 @@ function ProfilePage() {
   )
 }
 
-function UploadPage() {
-  const [selectedCategory, setSelectedCategory] = useState('动画')
-
-  return (
-    <AppShell>
-      <section className="section-block upload-hero">
-        <div>
-          <span className="eyebrow">投稿工作台</span>
-          <h1>把标题、封面、分区和发布设置收进一个投稿流程。</h1>
-          <p>面向创作者的发布台：不仅填表，还给出封面、标题、分区和排期建议，减少“发出去以后才发现问题”。</p>
-        </div>
-        <Link className="primary-button" to="/profile">
-          返回个人中心
-        </Link>
-      </section>
-
-      <section className="upload-signal-strip" aria-label="投稿智能提示">
-        <article>
-          <span>最佳发布时间</span>
-          <strong>今晚 20:00</strong>
-          <p>同类动画内容在该时段完播率最高。</p>
-        </article>
-        <article>
-          <span>标题强度</span>
-          <strong>86 / 100</strong>
-          <p>建议保留“幕后”和“整座城市”两个关键词。</p>
-        </article>
-        <article>
-          <span>封面风险</span>
-          <strong>低</strong>
-          <p>主体清晰，但移动端标题区域还可再放大。</p>
-        </article>
-      </section>
-
-      <div className="content-grid upload-layout">
-        <section className="section-block upload-form-panel">
-          <div className="section-heading">
-            <div>
-              <span className="section-kicker">稿件信息</span>
-              <h2>准备发布你的下一条视频</h2>
-            </div>
-          </div>
-          <form className="upload-form-grid">
-            <label className="full-span">
-              视频标题
-              <input defaultValue="未来都市漫游幕后：如何把整座城市塞进一条镜头里" type="text" />
-            </label>
-            <label className="full-span">
-              视频简介
-              <textarea defaultValue="这一期会拆解城市镜头的动线设计、光影层次和镜头推进方式，也会分享失败镜头是怎么返工的。" rows={5} />
-            </label>
-            <label>
-              分区
-              <select value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)}>
-                {categories.slice(1).map((category) => (
-                  <option key={category.name} value={category.name}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              发布时间
-              <input defaultValue="2026-05-02T20:00" type="datetime-local" />
-            </label>
-            <label className="full-span">
-              标签
-              <input defaultValue="原创动画, 城市景观, 幕后制作" type="text" />
-            </label>
-            <label className="full-span">
-              封面设计备注
-              <input defaultValue="保留高架桥和霓虹塔楼的透视关系，标题放右下角。" type="text" />
-            </label>
-            <div className="full-span publish-row">
-              <button type="button">保存草稿</button>
-              <button type="button">提交审核</button>
-            </div>
-          </form>
-        </section>
-
-        <aside className="sidebar-stack">
-          <section className="section-block compact-block">
-            <div className="section-heading">
-              <div>
-                <span className="section-kicker">发布前检查</span>
-                <h2>避免常见问题</h2>
-              </div>
-            </div>
-            <div className="checklist-list">
-              {uploadChecklist.map((item) => (
-                <article key={item.title} className="checklist-item">
-                  <strong>{item.title}</strong>
-                  <p>{item.detail}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="section-block compact-block">
-            <div className="section-heading">
-              <div>
-                <span className="section-kicker">当前分区</span>
-                <h2>{selectedCategory}</h2>
-              </div>
-            </div>
-            <div className="tag-cloud">
-              {videos
-                .filter((video) => video.category === selectedCategory)
-                .slice(0, 3)
-                .map((video) => (
-                  <Link key={video.id} className="quick-link-card" to={`/video/${video.id}`}>
-                    <strong>{video.title}</strong>
-                    <span>{video.creator}</span>
-                  </Link>
-                ))}
-            </div>
-          </section>
-        </aside>
-      </div>
-    </AppShell>
-  )
-}
-
 function VideoPage() {
   const {
     addHistory,
     addDanmakuBlockTerm,
-    clearDanmakuForVideo,
     danmakuBlocklist,
     danmakuByVideo,
     favoriteVideoIds,
@@ -1164,24 +853,18 @@ function VideoPage() {
     publishComment,
     publishDanmaku,
     removeDanmakuBlockTerm,
-    resetDanmakuForVideo,
     toggleFavorite,
     toggleFollow,
     userCommentsByVideo,
   } = useUserState()
   const { videoId } = useParams()
   const video = videos.find((item) => item.id === videoId) ?? videos[0]
+  const isEmbedded = Boolean(video.embedUrl)
   const relatedVideos = videos.filter((item) => item.id !== video.id).slice(0, 4)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const playerStageRef = useRef<HTMLDivElement | null>(null)
   const [draftComment, setDraftComment] = useState('')
   const [draftDanmaku, setDraftDanmaku] = useState('')
-  const [draftChatMessage, setDraftChatMessage] = useState('')
-  const [chatMessages, setChatMessages] = useState(() => [
-    { id: `${video.id}-chat-1`, user: '房管小卡', role: 'mod', content: '欢迎来到放映聊天室，友善讨论，拒绝剧透。', time: '刚刚' },
-    { id: `${video.id}-chat-2`, user: '追更雷达', role: 'member', content: `这期 ${video.creator} 的节奏好稳。`, time: '1 分钟前' },
-    { id: `${video.id}-chat-3`, user: '剪辑学习中', role: 'member', content: '有人一起看完再聊镜头设计吗？', time: '2 分钟前' },
-  ])
   const [isDanmakuEnabled, setIsDanmakuEnabled] = useState(true)
   const [selectedDanmakuColor, setSelectedDanmakuColor] = useState('#ffffff')
   const [selectedDanmakuMode, setSelectedDanmakuMode] = useState<'scroll' | 'top' | 'bottom'>('scroll')
@@ -1195,17 +878,33 @@ function VideoPage() {
   const [playbackRate, setPlaybackRate] = useState(1)
   const [volumeLevel, setVolumeLevel] = useState(70)
   const [hasPlaybackError, setHasPlaybackError] = useState(false)
-  const [danmakuSearchQuery, setDanmakuSearchQuery] = useState('')
-  const [danmakuModeFilter, setDanmakuModeFilter] = useState<'all' | 'scroll' | 'top' | 'bottom'>('all')
   const [draftBlockTerm, setDraftBlockTerm] = useState('')
-  const [danmakuSortOrder, setDanmakuSortOrder] = useState<'timeline-asc' | 'timeline-desc' | 'latest'>('timeline-asc')
+  const [commentSort, setCommentSort] = useState<'hot' | 'newest'>('hot')
+  const [likedCommentKeys, setLikedCommentKeys] = useState<Set<string>>(new Set())
   const playbackDurationLabel = formatVideoClock(videoDurationSeconds)
-  const allComments = [...(userCommentsByVideo[video.id] ?? []), ...comments]
-  const filteredDanmakuByMode = (danmakuByVideo[video.id] ?? []).filter((item) => {
-    const matchesMode = danmakuModeFilter === 'all' ? true : item.mode === danmakuModeFilter
-    const matchesBlocklist = !danmakuBlocklist.some((term) => item.text.toLowerCase().includes(term))
+  const allComments: CommentEntry[] = [...(userCommentsByVideo[video.id] ?? []), ...(comments as CommentEntry[])]
+  const sortedComments = commentSort === 'newest' ? [...allComments].reverse() : allComments
 
-    return matchesMode && matchesBlocklist
+  function toggleCommentLike(key: string) {
+    setLikedCommentKeys((current) => {
+      const next = new Set(current)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return next
+    })
+  }
+
+  function likeCountFor(comment: CommentEntry, index: number) {
+    const key = `${comment.user}-${index}`
+    const base = 56 + (comment.user.length * 7 + comment.content.length * 3) % 9000
+    return likedCommentKeys.has(key) ? base + 1 : base
+  }
+  const filteredDanmakuByMode = (danmakuByVideo[video.id] ?? []).filter((item) => {
+    const matchesBlocklist = !danmakuBlocklist.some((term) => item.text.toLowerCase().includes(term))
+    return matchesBlocklist
   })
   const visibleDanmaku = filteredDanmakuByMode.filter((item) => {
     const threshold = item.mode === 'scroll' ? 6 : 3
@@ -1215,18 +914,7 @@ function VideoPage() {
   const activeDanmaku = visibleDanmaku.filter((_, index) => (danmakuDensity === 'full' ? true : index % 2 === 0))
   const danmakuMarkers = [...new Map(filteredDanmakuByMode.map((item) => [item.timestampPercent, item])).values()]
   const filteredDanmakuList = [...filteredDanmakuByMode]
-    .filter((item) => item.text.toLowerCase().includes(danmakuSearchQuery.trim().toLowerCase()))
-    .sort((left, right) => {
-      if (danmakuSortOrder === 'latest') {
-        return right.id.localeCompare(left.id)
-      }
-
-      if (danmakuSortOrder === 'timeline-desc') {
-        return right.timestampPercent - left.timestampPercent
-      }
-
-      return left.timestampPercent - right.timestampPercent
-    })
+    .sort((left, right) => left.timestampPercent - right.timestampPercent)
 
   useEffect(() => {
     addHistory(video.id)
@@ -1239,12 +927,6 @@ function VideoPage() {
     setVolumeLevel(70)
     setHasPlaybackError(false)
     setIsPlaying(false)
-    setDraftChatMessage('')
-    setChatMessages([
-      { id: `${video.id}-chat-1`, user: '房管小卡', role: 'mod', content: '欢迎来到放映聊天室，友善讨论，拒绝剧透。', time: '刚刚' },
-      { id: `${video.id}-chat-2`, user: '追更雷达', role: 'member', content: `这期 ${video.creator} 的节奏好稳。`, time: '1 分钟前' },
-      { id: `${video.id}-chat-3`, user: '剪辑学习中', role: 'member', content: '有人一起看完再聊镜头设计吗？', time: '2 分钟前' },
-    ])
   }, [video.id])
 
   useEffect(() => {
@@ -1334,83 +1016,67 @@ function VideoPage() {
     setDraftDanmaku('')
   }
 
-  function handleChatSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
-    const content = draftChatMessage.trim()
-
-    if (!content) {
-      return
-    }
-
-    setChatMessages((current) => [
-      ...current,
-      { id: `${video.id}-chat-${Date.now()}`, user: '我', role: 'viewer', content, time: '刚刚' },
-    ])
-    setDraftChatMessage('')
-  }
-
   function handleBlockTermSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     addDanmakuBlockTerm(draftBlockTerm)
     setDraftBlockTerm('')
   }
 
-  function handleExportDanmaku() {
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    const payload = filteredDanmakuList.map((item) => ({
-      text: item.text,
-      mode: item.mode,
-      color: item.color,
-      timestampPercent: item.timestampPercent,
-      timestamp: formatDanmakuTime(item.timestampPercent, playbackDurationLabel),
-    }))
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-
-    link.href = url
-    link.download = `${video.id}-danmaku.json`
-    document.body.append(link)
-    link.click()
-    link.remove()
-    window.URL.revokeObjectURL(url)
-  }
-
   return (
     <AppShell>
       <div className="watch-layout">
         <section className="section-block player-block">
-          <div ref={playerStageRef} className="player-stage" style={{ background: video.cover }}>
-            <video
-              ref={videoRef}
-              className="player-video"
-              loop
-              playsInline
-              preload="metadata"
-              src={video.videoSrc}
-              onDurationChange={(event) => {
-                const nextDuration = Number.isFinite(event.currentTarget.duration)
-                  ? event.currentTarget.duration
-                  : parseDurationToSeconds(video.duration)
+          <div className="watch-title-row">
+            <h1>{video.title}</h1>
+            <div className="watch-meta-row">
+              <span className="meta-pill">{video.views} 播放</span>
+              <span className="meta-pill">{allComments.length} 评论</span>
+              <span className="meta-pill">{video.danmaku} 弹幕</span>
+              <span className="meta-pill">{video.publishedAt}</span>
+              <span className="meta-warn-text">· 个人观点，仅供参考</span>
+              <span className="meta-warn-text meta-warning">⚠ 未经作者授权，禁止转载</span>
+            </div>
+          </div>
 
-                setVideoDurationSeconds(nextDuration)
-              }}
-              onEnded={() => setIsPlaying(false)}
-              onError={() => setHasPlaybackError(true)}
-              onPause={() => setIsPlaying(false)}
-              onPlay={() => setIsPlaying(true)}
-              onTimeUpdate={(event) => syncPlaybackPercent(event.currentTarget.currentTime, event.currentTarget.duration)}
-            />
+          <div ref={playerStageRef} className="player-stage" style={{ background: video.cover }}>
+            {isEmbedded ? (
+              <iframe
+                className="player-embed"
+                src={video.embedUrl}
+                title={video.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                scrolling="no"
+                frameBorder={0}
+              />
+            ) : (
+              <video
+                ref={videoRef}
+                className="player-video"
+                loop
+                playsInline
+                preload="metadata"
+                src={video.videoSrc}
+                onDurationChange={(event) => {
+                  const nextDuration = Number.isFinite(event.currentTarget.duration)
+                    ? event.currentTarget.duration
+                    : parseDurationToSeconds(video.duration)
+
+                  setVideoDurationSeconds(nextDuration)
+                }}
+                onEnded={() => setIsPlaying(false)}
+                onError={() => setHasPlaybackError(true)}
+                onPause={() => setIsPlaying(false)}
+                onPlay={() => setIsPlaying(true)}
+                onTimeUpdate={(event) => syncPlaybackPercent(event.currentTarget.currentTime, event.currentTarget.duration)}
+              />
+            )}
             <div className="player-video-scrim" />
             <div className="player-chrome">
-              <span className="player-pill">正在播放</span>
+              <span className="player-pill">{isEmbedded ? '第三方源' : '正在播放'}</span>
               <span>{playbackDurationLabel}</span>
             </div>
-            {!isPlaying ? (
+            {!isEmbedded && !isPlaying ? (
               <div className="player-center">
                 <button className="play-symbol" type="button" onClick={() => void handlePlayToggle()}>
                   PLAY
@@ -1440,78 +1106,161 @@ function VideoPage() {
                 ))}
               </div>
             ) : null}
-            <div className="player-controls">
-              <div className="player-progress">
-                <span style={{ width: `${currentPlaybackPercent}%` }} />
-                <div className="danmaku-markers" aria-hidden="true">
-                  {danmakuMarkers.map((item) => (
-                    <button
-                      key={item.id}
-                      className="danmaku-marker"
-                      title={`${formatDanmakuTime(item.timestampPercent, playbackDurationLabel)} ${item.text}`}
-                      type="button"
-                      style={{ left: `${item.timestampPercent}%`, background: item.color }}
-                      onClick={() => seekToPercent(item.timestampPercent)}
-                    />
-                  ))}
-                </div>
-                <input
-                  aria-label="拖动播放进度"
-                  className="timeline-slider"
-                  max="100"
-                  min="0"
-                  type="range"
-                  value={currentPlaybackPercent}
-                  onChange={(event) => seekToPercent(Number(event.target.value))}
-                />
-              </div>
-              <div className="player-toolbar">
-                <div className="toolbar-left">
-                  <button type="button" onClick={() => void handlePlayToggle()}>
-                    {isPlaying ? '暂停' : '播放'}
-                  </button>
-                  <button type="button" onClick={() => seekToPercent(0)}>
-                    回到开头
-                  </button>
-                  <button type="button" onClick={() => setIsDanmakuEnabled((current) => !current)}>
-                    {isDanmakuEnabled ? '关闭弹幕' : '开启弹幕'}
-                  </button>
-                  <button type="button" onClick={() => setIsDanmakuPanelOpen((current) => !current)}>
-                    弹幕设置
-                  </button>
-                  <span>
-                    {formatDanmakuTime(currentPlaybackPercent, playbackDurationLabel)} / {playbackDurationLabel}
-                  </span>
-                </div>
-                <div className="toolbar-right">
-                  <span className="toolbar-chip">HD</span>
-                  <label className="toolbar-inline-control">
-                    倍速
-                    <select value={playbackRate} onChange={(event) => setPlaybackRate(Number(event.target.value))}>
-                      {[0.75, 1, 1.25, 1.5, 2].map((rate) => (
-                        <option key={rate} value={rate}>
-                          {rate}x
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="toolbar-inline-control volume-control">
-                    音量
-                    <input
-                      max="100"
-                      min="0"
-                      type="range"
-                      value={volumeLevel}
-                      onChange={(event) => setVolumeLevel(Number(event.target.value))}
-                    />
-                  </label>
-                  <button type="button" onClick={() => void handleFullscreen()}>
-                    全屏
-                  </button>
+            {isEmbedded ? (
+              <div className="player-controls player-controls-embed">
+                <div className="player-toolbar">
+                  <div className="toolbar-left">
+                    <button type="button" onClick={() => setIsDanmakuEnabled((current) => !current)}>
+                      {isDanmakuEnabled ? '关闭弹幕' : '开启弹幕'}
+                    </button>
+                    <button type="button" onClick={() => setIsDanmakuPanelOpen((current) => !current)}>
+                      弹幕设置
+                    </button>
+                    <span className="player-embed-hint">播放进度由第三方播放器控制</span>
+                  </div>
+                  <div className="toolbar-right">
+                    <span className="toolbar-chip">HD</span>
+                    <button type="button" onClick={() => void handleFullscreen()}>
+                      全屏
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="player-controls">
+                <div className="player-progress">
+                  <span style={{ width: `${currentPlaybackPercent}%` }} />
+                  <div className="danmaku-markers" aria-hidden="true">
+                    {danmakuMarkers.map((item) => (
+                      <button
+                        key={item.id}
+                        className="danmaku-marker"
+                        title={`${formatDanmakuTime(item.timestampPercent, playbackDurationLabel)} ${item.text}`}
+                        type="button"
+                        style={{ left: `${item.timestampPercent}%`, background: item.color }}
+                        onClick={() => seekToPercent(item.timestampPercent)}
+                      />
+                    ))}
+                  </div>
+                  <input
+                    aria-label="拖动播放进度"
+                    className="timeline-slider"
+                    max="100"
+                    min="0"
+                    type="range"
+                    value={currentPlaybackPercent}
+                    onChange={(event) => seekToPercent(Number(event.target.value))}
+                  />
+                </div>
+                <div className="player-toolbar">
+                  <div className="toolbar-left">
+                    <button type="button" onClick={() => void handlePlayToggle()}>
+                      {isPlaying ? '暂停' : '播放'}
+                    </button>
+                    <button type="button" onClick={() => seekToPercent(0)}>
+                      回到开头
+                    </button>
+                    <button type="button" onClick={() => setIsDanmakuEnabled((current) => !current)}>
+                      {isDanmakuEnabled ? '关闭弹幕' : '开启弹幕'}
+                    </button>
+                    <button type="button" onClick={() => setIsDanmakuPanelOpen((current) => !current)}>
+                      弹幕设置
+                    </button>
+                    <span>
+                      {formatDanmakuTime(currentPlaybackPercent, playbackDurationLabel)} / {playbackDurationLabel}
+                    </span>
+                  </div>
+                  <div className="toolbar-right">
+                    <span className="toolbar-chip">HD</span>
+                    <label className="toolbar-inline-control">
+                      倍速
+                      <select value={playbackRate} onChange={(event) => setPlaybackRate(Number(event.target.value))}>
+                        {[0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                          <option key={rate} value={rate}>
+                            {rate}x
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="toolbar-inline-control volume-control">
+                      音量
+                      <input
+                        max="100"
+                        min="0"
+                        type="range"
+                        value={volumeLevel}
+                        onChange={(event) => setVolumeLevel(Number(event.target.value))}
+                      />
+                    </label>
+                    <button type="button" onClick={() => void handleFullscreen()}>
+                      全屏
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+
+          <div className="watch-action-bar">
+            <button type="button" className="action-button">
+              <span className="action-glyph" aria-hidden="true">👍</span>
+              <span>点赞</span>
+              <span className="action-count">{video.likes}</span>
+            </button>
+            <button type="button" className="action-button">
+              <span className="action-glyph" aria-hidden="true">🪙</span>
+              <span>投币</span>
+              <span className="action-count">2.1万</span>
+            </button>
+            <button
+              type="button"
+              className={`action-button${favoriteVideoIds.includes(video.id) ? ' active' : ''}`}
+              onClick={() => toggleFavorite(video.id)}
+            >
+              <span className="action-glyph" aria-hidden="true">
+                {favoriteVideoIds.includes(video.id) ? '★' : '☆'}
+              </span>
+              <span>{favoriteVideoIds.includes(video.id) ? '已收藏' : '收藏'}</span>
+              <span className="action-count">{favoriteVideoIds.includes(video.id) ? '已加' : video.likes}</span>
+            </button>
+            <button type="button" className="action-button">
+              <span className="action-glyph" aria-hidden="true">↗</span>
+              <span>分享</span>
+              <span className="action-count">676</span>
+            </button>
+            <button type="button" className="action-button">
+              <span className="action-glyph" aria-hidden="true">⚐</span>
+              <span>稿件举报</span>
+            </button>
+            <button type="button" className="action-button">
+              <span className="action-glyph" aria-hidden="true">📝</span>
+              <span>记笔记</span>
+            </button>
+            <button type="button" className="action-button action-push-end">
+              <span className="action-glyph" aria-hidden="true">⋯</span>
+              <span>更多</span>
+            </button>
+          </div>
+
+          <section className="video-summary-block">
+            <div className="summary-head">
+              <span className="author">{video.creator}</span>
+              <span>· {video.publishedAt}</span>
+              <span>· {video.danmaku} 弹幕</span>
+            </div>
+            <p>{video.description}</p>
+          </section>
+
+          <div className="tag-row-bili">
+            <span className="tag-pill-bili tag-tag-up">新人 UP 报道</span>
+            {video.tags.map((tag) => (
+              <span key={tag} className="tag-pill-bili">
+                {tag}
+              </span>
+            ))}
+            <span className="tag-pill-bili">{video.category}</span>
+          </div>
+
           <form className="danmaku-form" onSubmit={handleDanmakuSubmit}>
             <div className="danmaku-input-row">
               <input
@@ -1627,233 +1376,214 @@ function VideoPage() {
               </section>
             ) : null}
           </form>
-          <section className="section-block danmaku-list-block">
-            <div className="section-heading">
-              <div>
-                <span className="section-kicker">弹幕列表</span>
-                <h2>{filteredDanmakuList.length} 条当前视频弹幕</h2>
-              </div>
-              <span className="section-note">支持点击列表或标记跳转时间点</span>
-            </div>
-            <div className="danmaku-list-tools">
-              <input
-                aria-label="搜索弹幕"
-                placeholder="搜索弹幕内容"
-                type="search"
-                value={danmakuSearchQuery}
-                onChange={(event) => setDanmakuSearchQuery(event.target.value)}
-              />
-              <div className="danmaku-tool-groups">
-                <div className="danmaku-filter-group">
-                  {[
-                    { label: '全部', value: 'all' },
-                    { label: '滚动', value: 'scroll' },
-                    { label: '顶部', value: 'top' },
-                    { label: '底部', value: 'bottom' },
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      className={danmakuModeFilter === option.value ? 'active-mode' : ''}
-                      type="button"
-                      onClick={() => setDanmakuModeFilter(option.value as 'all' | 'scroll' | 'top' | 'bottom')}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="danmaku-filter-group">
-                  {[
-                    { label: '时间正序', value: 'timeline-asc' },
-                    { label: '时间倒序', value: 'timeline-desc' },
-                    { label: '最新发送', value: 'latest' },
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      className={danmakuSortOrder === option.value ? 'active-mode' : ''}
-                      type="button"
-                      onClick={() =>
-                        setDanmakuSortOrder(option.value as 'timeline-asc' | 'timeline-desc' | 'latest')
-                      }
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="danmaku-filter-group">
-                  <button type="button" onClick={handleExportDanmaku}>
-                    导出筛选结果
-                  </button>
-                  <button type="button" onClick={() => clearDanmakuForVideo(video.id)}>
-                    清空当前视频
-                  </button>
-                  <button type="button" onClick={() => resetDanmakuForVideo(video.id)}>
-                    恢复默认
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="danmaku-list">
-              {filteredDanmakuList.slice(0, 12).map((item) => (
+
+          <section className="comment-block-bili">
+            <div className="comment-tabs">
+              <h2>评论 {allComments.length}</h2>
+              <div className="tab-buttons">
                 <button
-                  key={item.id}
-                  className="danmaku-list-item"
                   type="button"
-                  onClick={() => seekToPercent(item.timestampPercent)}
+                  className={commentSort === 'hot' ? 'active' : ''}
+                  onClick={() => setCommentSort('hot')}
                 >
-                  <span className="danmaku-time">{formatDanmakuTime(item.timestampPercent, playbackDurationLabel)}</span>
-                  <span className="danmaku-mode-label">{getDanmakuModeLabel(item.mode)}</span>
-                  <span className="danmaku-color-dot" style={{ background: item.color }} />
-                  <p>{item.text}</p>
+                  暴热
                 </button>
-              ))}
-            </div>
-          </section>
-          <div className="video-header">
-            <div>
-              <span className="section-kicker">{video.category}</span>
-              <h1 className="video-title">{video.title}</h1>
-              <p className="video-summary">{video.description}</p>
-            </div>
-            <div className="video-actions">
-              <button type="button">点赞 {video.likes}</button>
-              <button type="button">投币</button>
-              <button type="button" onClick={() => toggleFavorite(video.id)}>
-                {favoriteVideoIds.includes(video.id) ? '已收藏' : '收藏'}
-              </button>
-            </div>
-          </div>
-          <div className="video-meta-row">
-            <span>{video.creator}</span>
-            <span>{video.views} 播放</span>
-            <span>{video.danmaku} 弹幕</span>
-            <span>{video.publishedAt}</span>
-          </div>
-          <div className="tag-row">
-            {video.tags.map((tag) => (
-              <span key={tag} className="tag-chip">
-                {tag}
-              </span>
-            ))}
-          </div>
-          <section className="comment-block">
-            <div className="section-heading">
-              <div>
-                <span className="section-kicker">评论区</span>
-                <h2>{allComments.length} 条精选评论</h2>
+                <button
+                  type="button"
+                  className={commentSort === 'newest' ? 'active' : ''}
+                  onClick={() => setCommentSort('newest')}
+                >
+                  最新
+                </button>
+                <button type="button">只看 UP 主</button>
               </div>
             </div>
             <form className="comment-form" onSubmit={handleCommentSubmit}>
+              <div className="form-avatar" aria-hidden="true">我</div>
               <textarea
-                placeholder="发一条友善的评论，告诉大家你看到了什么。"
-                rows={3}
+                placeholder="发条友善的评论吧 ⌃ Ctrl+Enter 发送"
                 value={draftComment}
                 onChange={(event) => setDraftComment(event.target.value)}
               />
-              <button type="submit">发布评论</button>
+              <div className="form-actions">
+                <span>{draftComment.length}/1000</span>
+                <button type="submit" className="publish-button" disabled={!draftComment.trim()}>
+                  发布
+                </button>
+              </div>
             </form>
             <div className="comment-list">
-              {allComments.map((comment) => (
-                <article key={`${comment.user}-${comment.time}`} className="comment-item">
-                  <div className="avatar-badge">{comment.user.slice(0, 1)}</div>
+              {sortedComments.map((comment, index) => (
+                <article key={`${comment.user}-${comment.time}-${index}`} className="comment-item">
+                  <div className="comment-avatar" aria-hidden="true">{comment.user.slice(0, 1)}</div>
                   <div>
                     <div className="comment-meta">
-                      <strong>{comment.user}</strong>
-                      <span>{comment.time}</span>
+                      <span className="comment-name">{comment.user}</span>
+                      {comment.role === 'mod' ? (
+                        <span className="level-tag level-mod">房管</span>
+                      ) : comment.role === 'creator' ? (
+                        <span className="level-tag">UP主</span>
+                      ) : index % 3 === 0 ? (
+                        <span className="level-tag">LV6</span>
+                      ) : (
+                        <span className="level-tag level-member">LV4</span>
+                      )}
+                      <span>· {comment.time}</span>
                     </div>
-                    <p>{comment.content}</p>
+                    <p className="comment-content">{comment.content}</p>
+                    <div className="comment-footer">
+                      <button
+                        type="button"
+                        className={`like-count${likedCommentKeys.has(`${comment.user}-${index}`) ? ' active' : ''}`}
+                        onClick={() => toggleCommentLike(`${comment.user}-${index}`)}
+                      >
+                        <span aria-hidden="true">👍</span>
+                        <span>{likeCountFor(comment, index)}</span>
+                      </button>
+                      <button type="button">
+                        <span aria-hidden="true">💬</span>
+                        <span>回复</span>
+                      </button>
+                      <button type="button">
+                        <span aria-hidden="true">↗</span>
+                        <span>举报</span>
+                      </button>
+                    </div>
+                    {comment.replyTo ? (
+                      <div className="comment-sub">
+                        <strong>{comment.replyTo}</strong>
+                        <span>：{comment.replyContent}</span>
+                      </div>
+                    ) : null}
                   </div>
                 </article>
               ))}
             </div>
+            <div className="comment-login-hint">登录后即可参与评论，文明发言，拒绝引战。</div>
           </section>
         </section>
 
-        <aside className="sidebar-stack">
-          <section className="section-block compact-block chat-room-panel">
-            <div className="chat-room-head">
-              <div>
-                <span className="section-kicker">聊天室</span>
-                <h2>同步放映讨论</h2>
-              </div>
-              <span className="chat-online-dot">2.8 万在线</span>
-            </div>
-            <div className="chat-room-list" aria-live="polite">
-              {chatMessages.map((message) => (
-                <article key={message.id} className={`chat-message chat-message-${message.role}`}>
-                  <div className="chat-message-meta">
-                    <strong>{message.user}</strong>
-                    <span>{message.time}</span>
-                  </div>
-                  <p>{message.content}</p>
-                </article>
-              ))}
-            </div>
-            <form className="chat-room-form" onSubmit={handleChatSubmit}>
-              <input
-                aria-label="发送聊天室消息"
-                maxLength={80}
-                placeholder="和大家实时聊两句"
-                type="text"
-                value={draftChatMessage}
-                onChange={(event) => setDraftChatMessage(event.target.value)}
-              />
-              <button type="submit">发送</button>
-            </form>
-          </section>
-
-          <section className="section-block compact-block creator-panel">
-            <div className="creator-panel-head">
-              <div className="avatar-badge">{video.creator.slice(0, 1)}</div>
-              <div>
-                <strong>{video.creator}</strong>
-                <span>{video.category} 区 · 128.4 万粉丝</span>
+        <aside className="bili-side-rail">
+          <section className="up-card">
+            <div className="up-card-head">
+              <div className="up-card-avatar" aria-hidden="true">{video.creator.slice(0, 1)}</div>
+              <div className="up-card-meta">
+                <div className="up-name">
+                  <span>{video.creator}</span>
+                  <span className="verified-tick" aria-hidden="true">✓</span>
+                </div>
+                <div className="up-summary">看见有意思的说出来，偶尔做有意思的事</div>
               </div>
             </div>
-            <p>{video.description}</p>
-            <div className="creator-actions">
-              <button type="button" onClick={() => toggleFollow(video.creator)}>
-                {followedCreators.includes(video.creator) ? '已关注' : '关注'}
+            <div className="up-card-stats">
+              <div>
+                <strong>1.8 万</strong>
+                <span>关注</span>
+              </div>
+              <div>
+                <strong>138.4 万</strong>
+                <span>粉丝</span>
+              </div>
+              <div>
+                <strong>428</strong>
+                <span>投稿</span>
+              </div>
+            </div>
+            <div className="up-card-actions">
+              <button type="button" className="up-action charge">
+                <span aria-hidden="true">⚡</span>
+                充电
               </button>
-              <button type="button">私信</button>
+              <button
+                type="button"
+                className={`up-action follow${followedCreators.includes(video.creator) ? ' active' : ''}`}
+                onClick={() => toggleFollow(video.creator)}
+              >
+                {followedCreators.includes(video.creator) ? '已关注' : '+ 关注'}
+              </button>
             </div>
           </section>
 
-          <section className="section-block compact-block">
-            <div className="section-heading">
-              <div>
-                <span className="section-kicker">选集</span>
-                <h2>播放列表</h2>
-              </div>
+          <section className="danmaku-list-card">
+            <div className="head">
+              <h3>弹幕列表</h3>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={isDanmakuEnabled}
+                  onChange={(event) => setIsDanmakuEnabled(event.target.checked)}
+                />
+                <span className="toggle-track" />
+                <span>开启弹幕</span>
+              </label>
             </div>
-            <div className="episode-list">
-              {videos.slice(0, 5).map((item, index) => (
-                <Link key={item.id} className={`episode-item${item.id === video.id ? ' active-episode' : ''}`} to={`/video/${item.id}`}>
-                  <span>EP {index + 1}</span>
-                  <strong>{item.title}</strong>
-                </Link>
+            <div className="danmaku-rows">
+              {filteredDanmakuList.slice(0, 6).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="danmaku-row"
+                  onClick={() => seekToPercent(item.timestampPercent)}
+                >
+                  <span className="danmaku-time">{formatDanmakuTime(item.timestampPercent, playbackDurationLabel)}</span>
+                  <span className="danmaku-text">{item.text}</span>
+                  <span className="danmaku-color" style={{ background: item.color }} />
+                </button>
               ))}
             </div>
+            <button type="button" className="see-more">查看更多弹幕 →</button>
           </section>
 
-          <section className="section-block compact-block">
-            <div className="section-heading">
-              <div>
-                <span className="section-kicker">接下来播放</span>
-                <h2>相关推荐</h2>
+          <section className="hot-list-card">
+            <div className="head">
+              <h3>大调查热点人物 <span style={{ color: '#8793a5', fontSize: '0.78rem', fontWeight: 500 }}>(1/1)</span></h3>
+              <div className="hot-head-extra">
+                <button type="button">+ 订阅合集</button>
               </div>
             </div>
-            <div className="related-list">
-              {relatedVideos.map((item) => (
-                <Link key={item.id} className="related-card" to={`/video/${item.id}`}>
-                  <div className="related-cover" style={{ background: item.cover }} />
-                  <div>
-                    <strong>{item.title}</strong>
-                    <span>
-                      {item.creator} · {item.views}
-                    </span>
+            <div className="hot-list hot-list--stacked">
+              {relatedVideos.map((item, index) => (
+                <Link key={item.id} className="hot-item" to={`/video/${item.id}`}>
+                  <div className="hot-thumbnail-row">
+                    <div className="hot-cover" style={{ background: item.cover }}>
+                      <span className="hot-duration">{item.duration}</span>
+                    </div>
+                    <div className="hot-info">
+                      <span className="hot-title">{item.title}</span>
+                      <div className="hot-stats">
+                        <span>▲ {index % 2 === 0 ? '热榜 TOP' : `TOP ${index + 3}`}</span>
+                        <span>{item.views} 播放</span>
+                      </div>
+                    </div>
                   </div>
                 </Link>
               ))}
+            </div>
+          </section>
+
+          <section className="hot-list-card">
+            <div className="head">
+              <h3>接下来播放</h3>
+              <span style={{ color: '#8793a5', fontSize: '0.78rem' }}>相关推荐</span>
+            </div>
+            <div className="hot-list hot-list--stacked">
+              {videos
+                .filter((item) => item.id !== video.id)
+                .slice(0, 5)
+                .map((item, index) => (
+                  <Link key={item.id} className="hot-item" to={`/video/${item.id}`}>
+                    <div className="hot-thumbnail-row">
+                      <div className="hot-rank" style={{ alignSelf: 'center' }}>{index + 1}</div>
+                      <div className="hot-info">
+                        <span className="hot-title">{item.title}</span>
+                        <div className="hot-stats">
+                          <span>▲ {item.creator}</span>
+                          <span>{item.views}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
             </div>
           </section>
         </aside>
@@ -1896,11 +1626,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [searchValue, setSearchValue] = useState(searchParams.get('q') ?? '')
   const quickEntryItems = [
     { label: '动态', to: '/history' },
-    { label: '热门', to: '/rank' },
-    { label: '直播', to: '/live' },
-    { label: '众筹', to: '/crowdfund' },
-    { label: 'IP 工坊', to: '/ip-studio' },
-    { label: '创作中心', to: '/upload' },
+    { label: '创作中心', to: '/creator/dashboard' },
   ]
 
   useEffect(() => {
@@ -1924,7 +1650,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       return location.pathname === '/' && !searchParams.get('cat')
     }
 
-    if (to === '/rank' || to === '/live' || to === '/ip-studio') {
+    if (to === '/rank' || to === '/communities' || to === '/ip-studio') {
       return location.pathname === to
     }
 
@@ -1963,7 +1689,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <form className="search-box" onSubmit={handleSearchSubmit}>
             <input
               aria-label="搜索视频"
-              placeholder="搜索视频、番剧、直播或 UP 主"
+              placeholder="搜索视频、番剧或 UP 主"
               type="search"
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
@@ -2138,24 +1864,22 @@ function formatVideoClock(totalSeconds: number) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
-function getDanmakuModeLabel(mode: 'scroll' | 'top' | 'bottom') {
-  if (mode === 'top') {
-    return '顶部'
-  }
-
-  if (mode === 'bottom') {
-    return '底部'
-  }
-
-  return '滚动'
-}
-
 function parseCompactNumber(value: string) {
   if (value.endsWith('万')) {
     return Number.parseFloat(value) * 10000
   }
 
   return Number.parseFloat(value.replaceAll(',', ''))
+}
+
+function formatCompactNumber(value: number) {
+  if (value >= 100000000) {
+    return `${(value / 100000000).toFixed(2).replace(/\.?0+$/, '')} 亿`
+  }
+  if (value >= 10000) {
+    return `${(value / 10000).toFixed(1).replace(/\.0$/, '')} 万`
+  }
+  return value.toLocaleString('zh-CN')
 }
 
 function parseTimeRank(value: string) {
