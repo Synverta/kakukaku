@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import path from 'node:path'
 import { pool } from './db'
 import { authRouter } from './routes/auth'
 import { crowdfundRouter } from './routes/crowdfund'
@@ -14,12 +15,23 @@ import { growthRouter } from './routes/growth'
 import { rightsRouter } from './routes/rights'
 import { communitiesRouter } from './routes/communities'
 import { walletRouter } from './routes/wallet'
+import { uploadsRouter } from './routes/uploads'
 
 const app = express()
 
 app.use(cors())
 app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({ extended: true, limit: '1mb' }))
+
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads'), {
+  fallthrough: true,
+  maxAge: '7d',
+  setHeaders: (res, filePath) => {
+    if (/\.(mp4|webm|mov)$/i.test(filePath)) {
+      res.setHeader('Accept-Ranges', 'bytes')
+    }
+  },
+}))
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, time: new Date().toISOString() })
@@ -38,6 +50,7 @@ app.use('/api', growthRouter)
 app.use('/api', rightsRouter)
 app.use('/api', communitiesRouter)
 app.use('/api', walletRouter)
+app.use('/api', uploadsRouter)
 
 app.use(async (error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const message = error instanceof Error ? error.message : String(error)

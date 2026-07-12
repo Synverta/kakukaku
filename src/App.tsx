@@ -641,6 +641,8 @@ function LoginPage() {
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [remember, setRemember] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -654,7 +656,7 @@ function LoginPage() {
     } catch (err) {
       const message = typeof err === 'object' && err && 'message' in err ? String((err as { message?: unknown }).message ?? '') : ''
       const code = typeof err === 'object' && err && 'error' in err ? String((err as { error?: unknown }).error ?? '') : ''
-      setError(message || code || '登录失败')
+      setError(message || code || '登录失败，请稍后再试')
     } finally {
       setSubmitting(false)
     }
@@ -662,39 +664,155 @@ function LoginPage() {
 
   return (
     <AppShell>
-      <section className="auth-layout">
-        <div className="hero-copy auth-copy auth-copy-redesign">
-          <span className="eyebrow">账号登录 · kakukaku</span>
-          <h1>欢迎回来<br />一起继续把作品折成城市。</h1>
-          <p>登录后可以同步数据、发起 IP 共创、用 token 支持别人的创作。</p>
+      <section className="auth-layout login-layout">
+        <div className="hero-copy auth-copy auth-copy-redesign login-copy">
+          <div className="auth-copy-top">
+            <span className="eyebrow">账号登录 · kakukaku</span>
+            <h1>
+              欢迎回来
+              <br />
+              一起继续把作品折成城市。
+            </h1>
+            <p>登录后同步创作台、发起 IP 共创、用 token 支持别人的创作，让每一次灵感都有进度条。</p>
+          </div>
+
+          <div className="auth-feature-list" aria-label="登录后可使用的能力">
+            <div className="auth-feature-item">
+              <span className="auth-feature-icon" aria-hidden="true">稿</span>
+              <div>
+                <strong>同步创作台</strong>
+                <p>草稿、收藏与历史记录跨设备继续，不错过任何更新。</p>
+              </div>
+            </div>
+            <div className="auth-feature-item">
+              <span className="auth-feature-icon" aria-hidden="true">IP</span>
+              <div>
+                <strong>支持 IP 共创</strong>
+                <p>加入喜欢的项目，用 token 解锁共创权益与动态。</p>
+              </div>
+            </div>
+            <div className="auth-feature-item">
+              <span className="auth-feature-icon" aria-hidden="true">榜</span>
+              <div>
+                <strong>进入创作者榜单</strong>
+                <p>作品热度实时沉淀，离下一次推荐更近一步。</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="auth-stat-row" aria-label="社区数据">
+            <div>
+              <strong>12,800+</strong>
+              <span>活跃创作者</span>
+            </div>
+            <div>
+              <strong>320 万</strong>
+              <span>月观看量</span>
+            </div>
+            <div>
+              <strong>1,200+</strong>
+              <span>正在共创</span>
+            </div>
+          </div>
+
+          <blockquote className="auth-quote">
+            <p>「在这里我从一张稿子起步，做出了连续三季的城市景观动画。」</p>
+            <cite>—— 创作者 林同学</cite>
+          </blockquote>
         </div>
-        <form className="auth-panel" onSubmit={handleSubmit}>
-          <label>
-            用户名
-            <input
-              required
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-            />
-          </label>
-          <label>
-            密码
-            <input
-              required
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </label>
-          {error ? <div className="creator-error">{error}</div> : null}
-          <button type="submit" disabled={submitting}>
-            {submitting ? '登录中…' : '登录'}
-          </button>
-          <Link className="ghost-button small-button" to="/register">
-            没有账号？注册
-          </Link>
-        </form>
+
+        <section className="section-block auth-panel login-panel" aria-labelledby="login-title">
+          <div className="section-heading login-heading">
+            <div>
+              <span className="section-kicker">登录</span>
+              <h2 id="login-title">登录你的账号</h2>
+            </div>
+            <Link className="ghost-button small-button" to="/register">
+              去注册
+            </Link>
+          </div>
+
+          <form className="auth-form login-form" onSubmit={handleSubmit}>
+            <label>
+              用户名
+              <input
+                autoComplete="username"
+                maxLength={40}
+                minLength={3}
+                placeholder="请输入你的用户名"
+                required
+                type="text"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+              />
+            </label>
+            <div className="auth-form-field">
+              <label htmlFor="login-password">密码</label>
+              <div className="auth-input-wrap">
+                <input
+                  id="login-password"
+                  autoComplete="current-password"
+                  maxLength={128}
+                  minLength={8}
+                  placeholder="至少 8 位字符"
+                  required
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="auth-input-affix"
+                  aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                  onClick={() => setShowPassword((current) => !current)}
+                >
+                  {showPassword ? '隐藏' : '显示'}
+                </button>
+              </div>
+            </div>
+
+            <div className="auth-form-row login-form-row">
+              <label className="checkbox-line">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(event) => setRemember(event.target.checked)}
+                />
+                记住我
+              </label>
+              <a className="auth-link" href="/login" onClick={(event) => event.preventDefault()}>
+                忘记密码？
+              </a>
+            </div>
+
+            {error ? <div className="auth-error">{error}</div> : null}
+
+            <button type="submit" className="primary-button full-button" disabled={submitting}>
+              {submitting ? '登录中…' : '登录'}
+            </button>
+
+            <div className="auth-divider" aria-hidden="true">
+              <span>或使用快捷方式</span>
+            </div>
+
+            <div className="oauth-row login-oauth-row">
+              <button type="button" disabled>
+                微信登录
+              </button>
+              <button type="button" disabled>
+                微博登录
+              </button>
+              <button type="button" disabled>
+                手机号登录
+              </button>
+            </div>
+
+            <p className="auth-footnote">
+              还没有账号？
+              <Link to="/register">免费注册一个</Link>
+            </p>
+          </form>
+        </section>
       </section>
     </AppShell>
   )

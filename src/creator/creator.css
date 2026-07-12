@@ -1122,3 +1122,135 @@
   font-size: 0.85rem;
   margin-bottom: 1rem;
 }
+
+/* ===== 文件上传区(PublishPage) ===== */
+.block-strong {
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.creator-tip {
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  margin: 0.6rem 0 0;
+}
+.creator-tip code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  background: var(--surface-secondary);
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+}
+
+.upload-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.upload-zone {
+  border: 2px dashed var(--line-soft);
+  border-radius: 16px;
+  padding: 1.4rem;
+  text-align: center;
+  background: var(--surface-secondary);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+.upload-zone:hover {
+  border-color: var(--accent-primary);
+  background: var(--surface-primary);
+}
+.upload-zone:focus {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+.upload-zone.is-dragging {
+  border-color: var(--accent-primary);
+  background: var(--surface-primary);
+  transform: scale(1.01);
+}
+.upload-zone.is-error {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.04);
+}
+.upload-zone strong {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin-bottom: 0.3rem;
+}
+.upload-zone span {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+.upload-zone em {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  margin-top: 0.4rem;
+  font-style: normal;
+}
+
+.upload-progress {
+  text-align: left;
+}
+.upload-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.upload-progress-head strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  word-break: break-all;
+  max-width: 75%;
+}
+.upload-progress-head span {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  display: inline-block;
+}
+.upload-progress-bar {
+  height: 8px;
+  background: var(--surface-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.upload-progress-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-primary));
+  transition: width 200ms ease;
+}
+.upload-progress-foot {
+  text-align: right;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  margin-top: 0.3rem;
+}
+
+.upload-success strong {
+  color: #16a34a;
+  margin-bottom: 0.4rem;
+  word-break: break-all;
+}
+.upload-success span {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.upload-error strong {
+  color: #ef4444;
+  margin-bottom: 0.4rem;
+  word-break: break-all;
+}
+.upload-error span {
+  color: #ef4444;
+  font-size: 0.82rem;
+}
