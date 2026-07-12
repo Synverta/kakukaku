@@ -6,11 +6,21 @@ CREATE TABLE IF NOT EXISTS users (
   username      VARCHAR(40)  NOT NULL UNIQUE,
   email         VARCHAR(120),
   password_hash TEXT         NOT NULL,
-  avatar_letter VARCHAR(2)   NOT NULL DEFAULT '',
+  avatar_letter VARCHAR(2)  NOT NULL DEFAULT '',
   created_at    TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS users_email_idx ON users (email);
+
+-- 账号管理扩展(2026-07)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url              TEXT        NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio                     TEXT        NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_updated_at    TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at              TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at              TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS delete_scheduled_at     TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS users_deleted_idx ON users (deleted_at);
 
 CREATE TABLE IF NOT EXISTS campaigns (
   id                   TEXT        PRIMARY KEY,

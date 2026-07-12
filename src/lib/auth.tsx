@@ -7,7 +7,18 @@ export type AuthUser = {
   username: string
   email: string | null
   avatarLetter: string
+  avatarUrl: string
+  bio: string
   createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+}
+
+type UpdateProfileInput = {
+  username?: string
+  email?: string | null
+  avatarUrl?: string
+  bio?: string
 }
 
 type AuthContextValue = {
@@ -16,6 +27,10 @@ type AuthContextValue = {
   login: (username: string, password: string) => Promise<AuthUser>
   register: (username: string, email: string | null, password: string) => Promise<AuthUser>
   logout: () => void
+  refreshUser: () => Promise<AuthUser | null>
+  updateProfile: (input: UpdateProfileInput) => Promise<AuthUser>
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>
+  deleteAccount: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -23,6 +38,11 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const logout = useCallback(() => {
+    setToken(null)
+    setUser(null)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -70,14 +90,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result.user
   }, [])
 
-  const logout = useCallback(() => {
+  const refreshUser = useCallback(async () => {
+    try {
+      const result = await api.get<{ user: AuthUser }>('/auth/me')
+      setUser(result.user)
+      return result.user
+    } catch {
+      return null
+    }
+  }, [])
+
+  const updateProfile = useCallback(async (input: UpdateProfileInput) => {
+    const result = await api.patch<{ user: AuthUser }>('/auth/me', input)
+    setUser(result.user)
+    return result.user
+  }, [])
+
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    await api.post<{ ok: true }>('/auth/me/password', { currentPassword, newPassword })
+  }, [])
+
+  const deleteAccount = useCallback(async () => {
+    await api.delete<{ ok: true; message: string }>('/auth/me', {
+      body: { confirm: 'DELETE_MY_ACCOUNT' },
+    })
     setToken(null)
     setUser(null)
   }, [])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, loading, login, register, logout }),
-    [user, loading, login, register, logout],
+    () => ({
+      user,
+      loading,
+      login,
+      register,
+      logout,
+      refreshUser,
+      updateProfile,
+      changePassword,
+      deleteAccount,
+    }),
+    [user, loading, login, register, logout, refreshUser, updateProfile, changePassword, deleteAccount],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

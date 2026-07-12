@@ -18,6 +18,7 @@ import { CommunityHome } from './crowdfund/CommunityHome'
 import { LaunchCampaign } from './crowdfund/LaunchCampaign'
 import { MyOrders } from './crowdfund/MyOrders'
 import { RegisterPage } from './pages/RegisterPage'
+import { AccountPage } from './pages/AccountPage'
 import { CreatorShell } from './creator/CreatorShell'
 import { DashboardPage } from './creator/DashboardPage'
 import { WorksPage } from './creator/WorksPage'
@@ -256,6 +257,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/account" element={<AccountPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/video/:videoId" element={<VideoPage />} />
         <Route path="/crowdfund" element={<CrowdfundHome />} />
@@ -947,6 +949,10 @@ function ProfilePage() {
               <Link className="quick-link-card" to="/my-orders">
                 <strong>我的共创订单</strong>
                 <span>关闭未支付订单、对已支付订单申请退款</span>
+              </Link>
+              <Link className="quick-link-card" to="/account">
+                <strong>账号设置</strong>
+                <span>修改昵称、邮箱、头像或密码，注销账号</span>
               </Link>
               <article className="quick-link-card static-card">
                 <strong>已关注创作者</strong>

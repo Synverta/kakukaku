@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
+import { query } from '../db'
 import { verifyToken, type AuthPayload } from './jwt'
 
 declare module 'express-serve-static-core' {
@@ -21,6 +22,33 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 
   req.user = payload
+  next()
+}
+
+type DeletedCheckRow = { deleted_at: Date | null }
+
+const deletedCheckCache = new Map<number, { deletedAt: Date | null; checkedAt: number }>()
+const DELETED_CHECK_TTL_MS = 60_000
+
+export async function requireActiveUser(req: Request, res: Response, next: NextFunction) {
+  if (!req.user?.sub) return next()
+  const uid = Number(req.user.sub)
+  const now = Date.now()
+  const cached = deletedCheckCache.get(uid)
+  let deletedAt: Date | null | undefined
+  if (cached && now - cached.checkedAt < DELETED_CHECK_TTL_MS) {
+    deletedAt = cached.deletedAt
+  } else {
+    const rows = await query<DeletedCheckRow>(
+      `select deleted_at from users where id = $1 limit 1`,
+      [uid],
+    )
+    deletedAt = rows.rowCount === 0 ? null : (rows.rows[0].deleted_at ?? null)
+    deletedCheckCache.set(uid, { deletedAt, checkedAt: now })
+  }
+  if (deletedAt) {
+    return res.status(401).json({ error: 'account_deleted', message: '账号已注销' })
+  }
   next()
 }
 
