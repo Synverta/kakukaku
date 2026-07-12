@@ -345,3 +345,116 @@ CREATE TABLE IF NOT EXISTS community_comments (
 CREATE INDEX IF NOT EXISTS community_comments_post_idx ON community_comments (post_id, status, created_at ASC);
 CREATE INDEX IF NOT EXISTS community_comments_parent_idx ON community_comments (parent_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS community_comments_author_idx ON community_comments (author_id, created_at DESC);
+
+-- =========================================================
+-- Reddit Thing 模型（社区内容 v2）
+-- 旧 community_posts / community_comments 保留为兼容层；新写入走下列 Thing 表。
+-- =========================================================
+
+-- 所有可互动对象的统一根表。post 与 comment 共用同一 ID、作者、分数和可见性。
+CREATE TABLE IF NOT EXISTS community_things (
+  id                BIGSERIAL PRIMARY KEY,
+  fullname          VARCHAR(32) UNIQUE,
+  kind              VARCHAR(12) NOT NULL CHECK (kind IN ('post', 'comment')),
+  community_id      BIGINT      NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
+  author_id         BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  parent_thing_id   BIGINT      REFERENCES community_things(id) ON DELETE CASCADE,
+  root_post_id      BIGINT      REFERENCES community_things(id) ON DELETE CASCADE,
+  depth             SMALLINT    NOT NULL DEFAULT 0 CHECK (depth >= 0 AND depth <= 64),
+  -- 每段固定 13 位，按 path 排序即可得到稳定的深度优先评论树；支持 prefix 范围查询。
+  tree_path         TEXT        NOT NULL DEFAULT '',
+  score             INTEGER     NOT NULL DEFAULT 0,
+  comment_count     INTEGER     NOT NULL DEFAULT 0 CHECK (comment_count >= 0),
+  child_count       INTEGER     NOT NULL DEFAULT 0 CHECK (child_count >= 0),
+  status            VARCHAR(16) NOT NULL DEFAULT 'visible' CHECK (status IN ('visible', 'hidden', 'locked', 'deleted')),
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (
+    (kind = 'post' AND parent_thing_id IS NULL AND depth = 0)
+    OR (kind = 'comment' AND parent_thing_id IS NOT NULL AND depth > 0)
+  )
+);
+CREATE INDEX IF NOT EXISTS community_things_feed_idx ON community_things (community_id, kind, status, score DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS community_things_author_idx ON community_things (author_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS community_things_parent_idx ON community_things (parent_thing_id, status, score DESC, created_at ASC);
+CREATE INDEX IF NOT EXISTS community_things_tree_idx ON community_things (root_post_id, tree_path text_pattern_ops);
+
+-- 帖子特有字段。Thing ID 同时就是帖子 ID（类似 Reddit 的 t3）。
+CREATE TABLE IF NOT EXISTS community_post_things (
+  thing_id          BIGINT       PRIMARY KEY REFERENCES community_things(id) ON DELETE CASCADE,
+  title             VARCHAR(160) NOT NULL,
+  body              TEXT         NOT NULL,
+  category          VARCHAR(32)  NOT NULL DEFAULT '灵感征集',
+  tags              TEXT[]       NOT NULL DEFAULT '{}',
+  is_pinned         BOOLEAN      NOT NULL DEFAULT FALSE,
+  is_featured       BOOLEAN      NOT NULL DEFAULT FALSE,
+  adoption_status   VARCHAR(24)  NOT NULL DEFAULT 'none' CHECK (adoption_status IN ('none', 'reviewing', 'adopted', 'in_production', 'declined')),
+  adoption_note     TEXT         NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS community_post_things_category_idx ON community_post_things (category);
+
+-- 评论特有字段；parent_thing_id 与 tree_path 都在 community_things，避免树信息分散。
+CREATE TABLE IF NOT EXISTS community_comment_things (
+  thing_id          BIGINT      PRIMARY KEY REFERENCES community_things(id) ON DELETE CASCADE,
+  body              TEXT        NOT NULL
+);
+
+-- 对任意 Thing（帖子或评论）的唯一投票。缓存分数维护在 community_things.score。
+CREATE TABLE IF NOT EXISTS community_thing_votes (
+  thing_id          BIGINT      NOT NULL REFERENCES community_things(id) ON DELETE CASCADE,
+  user_id           BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  direction         SMALLINT    NOT NULL CHECK (direction IN (-1, 1)),
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (thing_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS community_thing_votes_user_idx ON community_thing_votes (user_id, updated_at DESC);
+
+-- =========================================================
+-- 钱包/酷币充值(2026-07)
+-- =========================================================
+
+-- 1) 钱包余额(每用户一行)
+CREATE TABLE IF NOT EXISTS wallet_balances (
+  user_id          BIGINT       PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  balance_tokens   BIGINT       NOT NULL DEFAULT 0 CHECK (balance_tokens >= 0),
+  total_recharged  BIGINT       NOT NULL DEFAULT 0,
+  total_consumed   BIGINT       NOT NULL DEFAULT 0,
+  updated_at       TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+-- 2) 充值订单(独立于众筹 orders，单独的 product kind)
+CREATE TABLE IF NOT EXISTS recharge_orders (
+  id              BIGSERIAL   PRIMARY KEY,
+  out_trade_no    VARCHAR(64) NOT NULL UNIQUE,
+  user_id         BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  package_id      VARCHAR(32) NOT NULL,
+  tokens          BIGINT      NOT NULL CHECK (tokens > 0),
+  bonus_tokens    BIGINT      NOT NULL DEFAULT 0,
+  total_tokens    BIGINT      NOT NULL,
+  amount_cents    INTEGER     NOT NULL CHECK (amount_cents > 0),
+  currency        VARCHAR(8)  NOT NULL DEFAULT 'CNY',
+  provider        VARCHAR(16) NOT NULL DEFAULT 'alipay',
+  status          VARCHAR(16) NOT NULL DEFAULT 'pending',
+  reconciled      BOOLEAN     NOT NULL DEFAULT FALSE,
+  paid_at         TIMESTAMPTZ,
+  closed_at       TIMESTAMPTZ,
+  refunded_at     TIMESTAMPTZ,
+  refund_reason   TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS recharge_orders_user_idx   ON recharge_orders (user_id);
+CREATE INDEX IF NOT EXISTS recharge_orders_status_idx ON recharge_orders (status);
+
+-- 3) 钱包流水(充值入账 / 后续消费预留)
+CREATE TABLE IF NOT EXISTS wallet_transactions (
+  id              BIGSERIAL   PRIMARY KEY,
+  user_id         BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  out_trade_no    VARCHAR(64),
+  kind            VARCHAR(16) NOT NULL,           -- recharge | consume | bonus | refund | adjust
+  tokens          BIGINT      NOT NULL,           -- 正负值均可，负数=扣减
+  memo            TEXT        NOT NULL DEFAULT '',
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS wallet_tx_user_idx ON wallet_transactions (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS wallet_tx_trade_idx ON wallet_transactions (out_trade_no) WHERE out_trade_no IS NOT NULL;

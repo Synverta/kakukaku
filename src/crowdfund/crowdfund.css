@@ -2228,6 +2228,7 @@
 .community-home-section-head h2 { margin: 0.2rem 0 0; color: #273442; font-size: 1.25rem; }
 .community-create-button { border: 0; border-radius: 999px; background: #f05a28; color: #fff; padding: 0.6rem 1rem; font: inherit; font-size: 0.82rem; font-weight: 800; cursor: pointer; box-shadow: 0 8px 16px rgba(240, 90, 40, 0.18); }
 .community-category-row { display: flex; gap: 0.45rem; margin-top: 0.9rem; overflow-x: auto; padding-bottom: 0.16rem; scrollbar-width: none; }
+.community-notice { margin-top: 0.8rem; padding: 0.62rem 0.78rem; border: 1px solid #f0d8c7; border-radius: 6px; background: #fff9f4; color: #9b552e; font-size: 0.78rem; line-height: 1.45; }
 .community-category-row::-webkit-scrollbar { display: none; }
 .community-category-row button { flex: 0 0 auto; border: 1px solid #dce2e9; border-radius: 999px; background: #fff; color: #657283; padding: 0.43rem 0.82rem; font: inherit; font-size: 0.79rem; font-weight: 700; cursor: pointer; }
 .community-category-row button.active { border-color: #f05a28; background: #fff2ed; color: #e15324; }

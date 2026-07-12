@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AppShell } from '../App'
+import { api } from '../lib/api'
+import { useAuth } from '../lib/auth'
 
 type CommunityCategory = '全部' | '动画' | '小说' | '游戏' | '音乐' | '科幻' | '生活方式'
 
@@ -33,14 +35,68 @@ const communities: Community[] = [
 
 const categories: CommunityCategory[] = ['全部', '动画', '小说', '游戏', '音乐', '科幻', '生活方式']
 
+type ApiCommunity = {
+  id: number
+  slug: string
+  name: string
+  description: string
+  category: string
+  iconText: string
+  accent: string
+  memberCount: number
+  weeklyPosts: number
+  isFeatured: boolean
+  joined: boolean
+}
+
+function compactCount(value: number) {
+  if (value >= 10000) return `${(value / 10000).toFixed(value >= 100000 ? 0 : 1)} 万`
+  return value.toLocaleString('zh-CN')
+}
+
+function fromApiCommunity(community: ApiCommunity): Community {
+  return {
+    id: String(community.id),
+    name: community.name,
+    handle: community.slug,
+    description: community.description,
+    members: compactCount(community.memberCount),
+    online: String(Math.max(0, Math.round(community.weeklyPosts * 1.6))),
+    category: categories.includes(community.category as CommunityCategory) ? community.category as Exclude<CommunityCategory, '全部'> : '生活方式',
+    accent: community.accent || 'linear-gradient(135deg, #385f87, #cf8464)',
+    icon: community.iconText || community.name.slice(0, 1),
+    trend: community.weeklyPosts > 0 || ['mist-harbor', 'shanhai-files', 'noiseroom', 'cyber-tales'].includes(community.slug) ? '上升' : undefined,
+    isFeatured: community.isFeatured,
+    isJoined: community.joined,
+  }
+}
+
 export function CommunityHome() {
+  const { user } = useAuth()
   const [activeCategory, setActiveCategory] = useState<CommunityCategory>('全部')
   const [query, setQuery] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [createdCommunities, setCreatedCommunities] = useState<Community[]>([])
+  const [remoteCommunities, setRemoteCommunities] = useState<Community[] | null>(null)
   const [joinedIds, setJoinedIds] = useState<string[]>(communities.filter((community) => community.isJoined).map((community) => community.id))
+  const [notice, setNotice] = useState('')
 
-  const allCommunities = useMemo(() => [...createdCommunities, ...communities], [createdCommunities])
+  useEffect(() => {
+    let cancelled = false
+    api.get<{ communities: ApiCommunity[] }>('/communities')
+      .then((result) => {
+        if (cancelled || result.communities.length === 0) return
+        const nextCommunities = result.communities.map(fromApiCommunity)
+        setRemoteCommunities(nextCommunities)
+        setJoinedIds(nextCommunities.filter((community) => community.isJoined).map((community) => community.id))
+      })
+      .catch(() => {
+        if (!cancelled) setNotice('暂时无法连接社区服务，正在显示本地内容。')
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  const allCommunities = useMemo(() => [...createdCommunities, ...(remoteCommunities ?? communities)], [createdCommunities, remoteCommunities])
   const filteredCommunities = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
     return allCommunities.filter((community) => {
@@ -50,27 +106,42 @@ export function CommunityHome() {
     })
   }, [activeCategory, allCommunities, query])
 
-  function toggleJoin(communityId: string) {
-    setJoinedIds((current) => current.includes(communityId) ? current.filter((id) => id !== communityId) : [...current, communityId])
+  async function toggleJoin(community: Community) {
+    if (!user) {
+      setNotice('登录后即可加入社区并保存你的共创记录。')
+      return
+    }
+    const isJoined = joinedIds.includes(community.id)
+    try {
+      const result = isJoined
+        ? await api.delete<{ ok: true }>(`/communities/${community.handle}/memberships`)
+        : await api.post<{ community: ApiCommunity }>(`/communities/${community.handle}/memberships`)
+      if (!isJoined && 'community' in result) {
+        const next = fromApiCommunity(result.community)
+        setRemoteCommunities((current) => (current ?? communities).map((item) => item.id === community.id ? next : item))
+      }
+      setJoinedIds((current) => isJoined ? current.filter((id) => id !== community.id) : [...current, community.id])
+      setNotice('')
+    } catch {
+      setNotice('操作未完成，请稍后重试。')
+    }
   }
 
-  function createCommunity(form: { name: string; description: string; category: Exclude<CommunityCategory, '全部'> }) {
-    const newCommunity: Community = {
-      id: `community-${Date.now()}`,
-      name: form.name,
-      handle: form.name.toLowerCase().replace(/\s+/g, '-').slice(0, 24) || 'new-community',
-      description: form.description,
-      members: '1',
-      online: '1',
-      category: form.category,
-      accent: 'linear-gradient(135deg, #385f87, #cf8464)',
-      icon: form.name.slice(0, 1),
-      trend: '新建',
-      isJoined: true,
+  async function createCommunity(form: { name: string; description: string; category: Exclude<CommunityCategory, '全部'> }) {
+    if (!user) {
+      setNotice('请先登录，再创建属于你的共创社区。')
+      return
     }
-    setCreatedCommunities((current) => [newCommunity, ...current])
-    setJoinedIds((current) => [...current, newCommunity.id])
-    setShowCreate(false)
+    try {
+      const result = await api.post<{ community: ApiCommunity }>('/communities', form)
+      const newCommunity = { ...fromApiCommunity(result.community), trend: '新建' as const }
+      setCreatedCommunities((current) => [newCommunity, ...current])
+      setJoinedIds((current) => [...current, newCommunity.id])
+      setShowCreate(false)
+      setNotice('社区已创建，快发出第一条共创讨论吧。')
+    } catch {
+      setNotice('创建失败，请确认名称和描述后重试。')
+    }
   }
 
   return (
@@ -100,6 +171,7 @@ export function CommunityHome() {
             <div><span className="community-section-kicker">DISCOVER</span><h2>发现社区</h2></div>
             <button type="button" className="community-create-button" onClick={() => setShowCreate(true)}>＋ 创建社区</button>
           </section>
+          {notice ? <div className="community-notice" role="status">{notice}</div> : null}
 
           <div className="community-category-row" role="tablist" aria-label="社区分类">
             {categories.map((category) => (
@@ -109,7 +181,7 @@ export function CommunityHome() {
 
           <section className="community-featured-grid">
             {allCommunities.filter((community) => community.isFeatured).slice(0, 3).map((community) => (
-              <FeaturedCommunityCard key={community.id} community={community} isJoined={joinedIds.includes(community.id)} onJoin={() => toggleJoin(community.id)} />
+              <FeaturedCommunityCard key={community.id} community={community} isJoined={joinedIds.includes(community.id)} onJoin={() => toggleJoin(community)} />
             ))}
           </section>
 
@@ -120,7 +192,7 @@ export function CommunityHome() {
 
           <div className="community-directory-list">
             {filteredCommunities.map((community) => (
-              <CommunityRow key={community.id} community={community} isJoined={joinedIds.includes(community.id)} onJoin={() => toggleJoin(community.id)} />
+              <CommunityRow key={community.id} community={community} isJoined={joinedIds.includes(community.id)} onJoin={() => toggleJoin(community)} />
             ))}
             {filteredCommunities.length === 0 ? <div className="community-empty">没有找到匹配社区。换个关键词，或创建第一个社区。</div> : null}
           </div>
@@ -143,7 +215,7 @@ export function CommunityHome() {
           <section className="community-side-card community-joined-card">
             <div className="community-side-heading">你的社区</div>
             {allCommunities.filter((community) => joinedIds.includes(community.id)).slice(0, 4).map((community) => (
-              <Link key={community.id} className="community-joined-link" to={community.id === 'mist-harbor' ? '/ip-studio' : '/communities'}>
+              <Link key={community.id} className="community-joined-link" to={community.handle === 'mist-harbor' ? '/ip-studio' : `/communities?community=${community.handle}`}>
                 <CommunityIcon community={community} size="small" /><span>r/{community.name}</span><b>›</b>
               </Link>
             ))}
@@ -168,7 +240,7 @@ function CommunityIcon({ community, size = 'normal' }: { community: Community; s
 }
 
 function CommunityLink({ community, children, className }: { community: Community; children: ReactNode; className?: string }) {
-  return <Link className={className} to={community.id === 'mist-harbor' ? '/ip-studio' : `/communities?community=${community.handle}`}>{children}</Link>
+  return <Link className={className} to={community.handle === 'mist-harbor' ? '/ip-studio' : `/communities?community=${community.handle}`}>{children}</Link>
 }
 
 function FeaturedCommunityCard({ community, isJoined, onJoin }: { community: Community; isJoined: boolean; onJoin: () => void }) {

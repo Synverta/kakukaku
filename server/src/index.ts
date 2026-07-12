@@ -12,6 +12,8 @@ import { fansRouter } from './routes/fans'
 import { revenueRouter } from './routes/revenue'
 import { growthRouter } from './routes/growth'
 import { rightsRouter } from './routes/rights'
+import { communitiesRouter } from './routes/communities'
+import { walletRouter } from './routes/wallet'
 
 const app = express()
 
@@ -34,6 +36,8 @@ app.use('/api', fansRouter)
 app.use('/api', revenueRouter)
 app.use('/api', growthRouter)
 app.use('/api', rightsRouter)
+app.use('/api', communitiesRouter)
+app.use('/api', walletRouter)
 
 app.use(async (error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const message = error instanceof Error ? error.message : String(error)
