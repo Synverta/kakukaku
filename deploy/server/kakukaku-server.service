@@ -1,0 +1,20 @@
+[Unit]
+Description=kakukaku API server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/kakukaku-server
+EnvironmentFile=/opt/kakukaku-server/.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/env node /opt/kakukaku-server/dist/index.js
+Restart=always
+RestartSec=5
+User=www-data
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/kakukaku-server
+
+[Install]
+WantedBy=multi-user.target
