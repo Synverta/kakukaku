@@ -18,7 +18,7 @@ function readEnv(name: string): string {
 function getMockBaseUrl(): string {
   const fromEnv = readEnv('MOCK_CHECKOUT_BASE_URL')
   if (fromEnv) return fromEnv
-  const port = Number(process.env.PORT ?? 6002)
+  const port = Number(process.env.PORT ?? 5001)
   return `http://localhost:${port}`
 }
 

@@ -75,7 +75,7 @@ function rowToRecharge(row: RechargeRow) {
 function getBaseUrl(): string {
   const fromEnv = (process.env.MOCK_CHECKOUT_BASE_URL ?? '').trim()
   if (fromEnv) return fromEnv.replace(/\/$/, '')
-  const port = Number(process.env.PORT ?? 6002)
+  const port = Number(process.env.PORT ?? 5001)
   return `http://localhost:${port}`
 }
 
