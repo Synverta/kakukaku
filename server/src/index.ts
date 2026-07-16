@@ -65,7 +65,7 @@ async function shutdown() {
 process.on('SIGINT', shutdown)
 process.on('SIGTERM', shutdown)
 
-const port = Number(process.env.PORT ?? 5001)
+const port = Number(process.env.PORT ?? 6002)
 app.listen(port, () => {
   console.log(`kakukaku server listening on http://localhost:${port}`)
 })
