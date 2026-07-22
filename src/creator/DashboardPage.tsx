@@ -6,7 +6,7 @@ import { formatCompact } from './components/format'
 import { StatCard } from './components/StatCard'
 import { Sparkline } from './components/Sparkline'
 import { BarChart } from './components/BarChart'
-import { VIDEO_STATUS_LABELS, type CreatorVideo, type DashboardData } from './types'
+import type { CreatorVideo, DashboardData } from './types'
 
 export function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)

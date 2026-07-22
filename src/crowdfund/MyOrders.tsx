@@ -126,8 +126,9 @@ export function MyOrders() {
           共创订单与退款
         </h1>
         <p style={{ margin: 0, color: '#5c6478', lineHeight: 1.7, maxWidth: '64ch' }}>
-          关闭未支付订单、退款已支付订单。退款会同步把 Pledge 与项目累积分成退回。
+           管理数字权益订单、交付状态与退款。退款完成后，相应数字权益会同步撤销。
         </p>
+        <Link className="ghost-button small-button" to="/my-entitlements">查看我的权益与交付</Link>
       </section>
 
       {error ? (
@@ -142,7 +143,7 @@ export function MyOrders() {
         ) : orders.length === 0 ? (
           <div className="empty-state">
             <h3>你还没有订单</h3>
-            <p>去 <Link to="/crowdfund">共创列表</Link> 支持一个 IP 计划吧。</p>
+             <p>去 <Link to="/cocreate">共创列表</Link> 选择一项数字权益吧。</p>
           </div>
         ) : (
           <div className="cf-order-list">
@@ -158,8 +159,8 @@ export function MyOrders() {
                     <span className="cf-order-id"><code>{order.outTradeNo}</code></span>
                   </div>
                   <div className="cf-order-main">
-                    <Link className="cf-order-title" to={`/crowdfund/project/${order.campaignId}`}>
-                      {order.tierName} · {order.tokens.toLocaleString('zh-CN')} token
+                     <Link className="cf-order-title" to={`/cocreate/project/${order.campaignId}`}>
+                       {order.tierName}数字权益
                     </Link>
                     <p>
                       ¥ {total} · {order.provider === 'alipay' ? '支付宝' : '微信支付'} · 创建于 {new Date(order.createdAt).toLocaleString('zh-CN')}

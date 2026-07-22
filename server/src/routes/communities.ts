@@ -4,7 +4,7 @@ import { optionalAuth, requireAuth } from '../lib/auth'
 
 type CommunityRow = {
   id: string; slug: string; name: string; description: string; category: string; icon_text: string; accent: string; banner: string
-  creator_id: string | null; member_count: string; post_count: string; is_featured: boolean; created_at: Date; joined: boolean; weekly_posts: string
+  creator_id: string | null; member_count: string; post_count: string; is_featured: boolean; created_at: Date; joined: boolean; weekly_posts: string; ip_id?: string | null
 }
 
 type PostRow = {
@@ -30,7 +30,7 @@ const seedCommunities = [
 ] as const
 
 function toCommunity(row: CommunityRow) {
-  return { id: Number(row.id), slug: row.slug, name: row.name, description: row.description, category: row.category, iconText: row.icon_text, accent: row.accent, banner: row.banner, creatorId: row.creator_id ? Number(row.creator_id) : null, memberCount: Number(row.member_count), postCount: Number(row.post_count), weeklyPosts: Number(row.weekly_posts), isFeatured: row.is_featured, joined: row.joined, createdAt: row.created_at.toISOString() }
+  return { id: Number(row.id), slug: row.slug, name: row.name, description: row.description, category: row.category, iconText: row.icon_text, accent: row.accent, banner: row.banner, creatorId: row.creator_id ? Number(row.creator_id) : null, ipId: row.ip_id ? Number(row.ip_id) : null, memberCount: Number(row.member_count), postCount: Number(row.post_count), weeklyPosts: Number(row.weekly_posts), isFeatured: row.is_featured, joined: row.joined, createdAt: row.created_at.toISOString() }
 }
 
 function toPost(row: PostRow) {
@@ -52,7 +52,7 @@ async function ensureCommunitySeeds() {
 }
 
 function communitySelect(viewerParam = '$1') {
-  return `select c.id, c.slug, c.name, c.description, c.category, c.icon_text, c.accent, c.banner, c.creator_id, c.member_count, c.post_count, c.is_featured, c.created_at,
+  return `select c.id, c.slug, c.name, c.description, c.category, c.icon_text, c.accent, c.banner, c.creator_id, c.ip_id, c.member_count, c.post_count, c.is_featured, c.created_at,
     exists(select 1 from community_members cm where cm.community_id = c.id and cm.user_id = ${viewerParam}) as joined,
     (select count(*) from community_things t where t.community_id = c.id and t.kind = 'post' and t.status = 'visible' and t.created_at >= now() - interval '7 days') as weekly_posts
     from communities c`
@@ -171,6 +171,53 @@ communitiesRouter.post('/communities/:slug/posts', requireAuth, async (req, res)
     await client.query('commit')
     res.status(201).json({ post: toPost(result.rows[0]) })
   } catch { await client.query('rollback'); res.status(500).json({ error: 'server_error' }) } finally { client.release() }
+})
+
+communitiesRouter.post('/communities/:slug/contributions', requireAuth, async (req, res) => {
+  const title = cleanText(req.body?.title, 160); const body = cleanText(req.body?.body, 12000); const kind = cleanText(req.body?.kind, 24) || 'idea'
+  if (title.length < 4 || body.length < 4) return res.status(400).json({ error: 'invalid_payload' })
+  const client = await pool.connect()
+  try {
+    await client.query('begin')
+    const community = await client.query<{ id: string; ip_id: string | null }>('select id,ip_id from communities where slug=$1 and is_archived=false for update', [req.params.slug])
+    if (community.rowCount === 0 || !community.rows[0].ip_id) { await client.query('rollback'); return res.status(409).json({ error: 'community_not_linked_to_ip' }) }
+    const communityId = community.rows[0].id
+    const thing = await client.query<{ id: string }>(`insert into community_things (kind,community_id,author_id,depth,tree_path) values ('post',$1,$2,0,'') returning id`, [communityId, req.user!.sub])
+    const thingId = thing.rows[0].id
+    await client.query(`update community_things set root_post_id=id,tree_path=$1,fullname=$2 where id=$3`, [treeSegment(thingId), `t3_${Number(thingId).toString(36)}`, thingId])
+    await client.query(`insert into community_post_things (thing_id,title,body,category,tags) values ($1,$2,$3,'共创提案','{}')`, [thingId, title, body])
+    await client.query(`insert into community_contributions (thing_id,ip_id,kind,credit_name) values ($1,$2,$3,$4)`, [thingId, community.rows[0].ip_id, kind, cleanText(req.body?.creditName, 80)])
+    await client.query(`update communities set post_count=post_count+1,updated_at=now() where id=$1`, [communityId])
+    await client.query('commit')
+    res.status(201).json({ thingId: Number(thingId), status: 'submitted' })
+  } catch { await client.query('rollback'); res.status(500).json({ error: 'server_error' }) } finally { client.release() }
+})
+
+communitiesRouter.get('/community-contributions/:id', optionalAuth, async (req, res) => {
+  const rows = await query(
+    `select c.*, p.title,p.body,t.author_id,u.username as author_name,i.title as ip_title,i.slug as ip_slug
+       from community_contributions c join community_post_things p on p.thing_id=c.thing_id
+       join community_things t on t.id=c.thing_id join users u on u.id=t.author_id join ips i on i.id=c.ip_id where c.thing_id=$1`, [req.params.id],
+  )
+  if (rows.rowCount === 0) return res.status(404).json({ error: 'not_found' })
+  const events = await query(`select e.*,u.username as actor_name from contribution_events e join users u on u.id=e.actor_user_id where e.contribution_thing_id=$1 order by e.created_at desc`, [req.params.id])
+  res.json({ contribution: rows.rows[0], events: events.rows })
+})
+
+communitiesRouter.post('/community-contributions/:id/adoption-events', requireAuth, async (req, res) => {
+  const status = cleanText(req.body?.status, 24); const allowed = ['reviewing','adopted','in_production','declined']
+  if (!allowed.includes(status)) return res.status(400).json({ error: 'invalid_status' })
+  const current = await query<{ status: string; owner_user_id: string | null; creator_id: string | null }>(
+    `select cc.status,i.owner_user_id,cm.creator_id from community_contributions cc join ips i on i.id=cc.ip_id join community_things t on t.id=cc.thing_id join communities cm on cm.id=t.community_id where cc.thing_id=$1`, [req.params.id],
+  )
+  if (current.rowCount === 0) return res.status(404).json({ error: 'not_found' })
+  const canManage = [current.rows[0].owner_user_id, current.rows[0].creator_id].some((id) => Number(id) === req.user!.sub)
+  if (!canManage) return res.status(403).json({ error: 'forbidden' })
+  const note = cleanText(req.body?.note, 2000)
+  await query(`insert into contribution_events (contribution_thing_id,actor_user_id,from_status,to_status,note) values ($1,$2,$3,$4,$5)`, [req.params.id, req.user!.sub, current.rows[0].status, status, note])
+  await query(`update community_contributions set status=$2,updated_at=now() where thing_id=$1`, [req.params.id, status])
+  await query(`update community_post_things set adoption_status=$2,adoption_note=$3 where thing_id=$1`, [req.params.id, status, note])
+  res.json({ thingId: Number(req.params.id), status, note })
 })
 
 communitiesRouter.get('/community-posts/:id', optionalAuth, async (req, res) => {

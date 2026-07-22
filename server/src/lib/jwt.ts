@@ -13,8 +13,9 @@ export function signToken(payload: AuthPayload): string {
 
 export function verifyToken(token: string): AuthPayload | null {
   try {
-    const decoded = jwt.verify(token, secret!) as AuthPayload
-    return decoded
+    const decoded = jwt.verify(token, secret!)
+    if (typeof decoded === 'string' || typeof decoded.sub !== 'number' || typeof decoded.username !== 'string') return null
+    return { sub: decoded.sub, username: decoded.username }
   } catch {
     return null
   }

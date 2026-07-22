@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { Pool } from 'pg'
+import { Pool, type QueryResultRow } from 'pg'
 
 const connectionString = process.env.DATABASE_URL
 
@@ -16,7 +16,7 @@ export const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 })
 
-export async function query<T = unknown>(text: string, params?: unknown[]) {
+export async function query<T extends QueryResultRow = QueryResultRow>(text: string, params?: unknown[]) {
   const client = await pool.connect()
   try {
     const result = await client.query<T>(text, params)

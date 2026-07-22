@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { query } from '../db'
-import { requireAuth } from '../lib/auth'
+import { optionalAuth, requireAuth } from '../lib/auth'
 
 export type VideoStatus = 'draft' | 'pending' | 'published' | 'rejected'
 
@@ -24,6 +24,11 @@ type VideoRow = {
   published_at: Date | null
   created_at: Date
   updated_at: Date
+  content_type?: string
+  subtitle_url?: string
+  pinned?: boolean
+  creator_name?: string
+  creator_avatar?: string
 }
 
 export type CreatorVideo = {
@@ -45,6 +50,10 @@ export type CreatorVideo = {
   publishedAt: string | null
   createdAt: string
   updatedAt: string
+  contentType: string
+  subtitleUrl: string
+  pinned: boolean
+  creator?: { name: string; avatarLetter: string }
 }
 
 function rowToVideo(row: VideoRow): CreatorVideo {
@@ -67,6 +76,10 @@ function rowToVideo(row: VideoRow): CreatorVideo {
     publishedAt: row.published_at ? row.published_at.toISOString() : null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
+    contentType: row.content_type ?? 'video',
+    subtitleUrl: row.subtitle_url ?? '',
+    pinned: row.pinned ?? false,
+    creator: row.creator_name ? { name: row.creator_name, avatarLetter: row.creator_avatar ?? '' } : undefined,
   }
 }
 
@@ -79,6 +92,45 @@ function parseTags(raw: unknown): string[] {
 }
 
 export const videosRouter = Router()
+
+videosRouter.get('/videos', optionalAuth, async (req, res) => {
+  const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 80) : ''
+  const category = typeof req.query.category === 'string' ? req.query.category.trim().slice(0, 60) : ''
+  const sort = req.query.sort === 'popular' ? 'popular' : 'latest'
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit ?? 24)))
+  const params: unknown[] = []
+  const where = [`v.status = 'published'`, `(v.published_at is null or v.published_at <= now())`]
+  if (q) {
+    params.push(`%${q}%`)
+    where.push(`(v.title ilike $${params.length} or v.description ilike $${params.length} or u.username ilike $${params.length})`)
+  }
+  if (category) {
+    params.push(category)
+    where.push(`v.category = $${params.length}`)
+  }
+  params.push(limit)
+  const orderBy = sort === 'popular' ? 'v.views desc, v.likes desc, v.published_at desc nulls last' : 'v.pinned desc, v.published_at desc nulls last, v.created_at desc'
+  const result = await query<VideoRow>(
+    `select v.*, u.username as creator_name, u.avatar_letter as creator_avatar
+       from videos v join users u on u.id = v.creator_id
+      where ${where.join(' and ')} order by ${orderBy} limit $${params.length}`,
+    params,
+  )
+  res.json({ videos: result.rows.map(rowToVideo) })
+})
+
+videosRouter.get('/videos/:id', optionalAuth, async (req, res, next) => {
+  const id = Number(req.params.id)
+  if (!Number.isSafeInteger(id) || id < 1) return next()
+  const result = await query<VideoRow>(
+    `select v.*, u.username as creator_name, u.avatar_letter as creator_avatar
+       from videos v join users u on u.id = v.creator_id
+      where v.id = $1 and v.status = 'published' and (v.published_at is null or v.published_at <= now())`,
+    [id],
+  )
+  if (result.rowCount === 0) return res.status(404).json({ error: 'not_found' })
+  res.json({ video: rowToVideo(result.rows[0]) })
+})
 
 videosRouter.get('/videos/mine', requireAuth, async (req, res) => {
   const status = typeof req.query.status === 'string' ? req.query.status : null
@@ -116,10 +168,10 @@ videosRouter.post('/videos', requireAuth, async (req, res) => {
   const scheduledAt = body.scheduledAt ? new Date(String(body.scheduledAt)) : null
 
   const inserted = await query<VideoRow>(
-    `insert into videos (creator_id, title, description, category, tags, cover, video_src, embed_url, duration, status, scheduled_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `insert into videos (creator_id, title, description, category, tags, cover, video_src, embed_url, duration, status, scheduled_at, content_type)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      returning *`,
-    [req.user!.sub, title, description, category, tags, cover, videoSrc, embedUrl, duration, status, scheduledAt],
+    [req.user!.sub, title, description, category, tags, cover, videoSrc, embedUrl, duration, status, scheduledAt, String(body.contentType ?? 'video')],
   )
   res.status(201).json({ video: rowToVideo(inserted.rows[0]) })
 })
@@ -150,6 +202,9 @@ videosRouter.patch('/videos/:id', requireAuth, async (req, res) => {
   if (body.videoSrc !== undefined) addField('video_src', body.videoSrc, (v) => String(v))
   if (body.embedUrl !== undefined) addField('embed_url', body.embedUrl, (v) => String(v))
   if (body.duration !== undefined) addField('duration', body.duration, (v) => String(v))
+  if (body.contentType !== undefined) addField('content_type', body.contentType, (v) => String(v))
+  if (body.subtitleUrl !== undefined) addField('subtitle_url', body.subtitleUrl, (v) => String(v))
+  if (body.pinned !== undefined) addField('pinned', Boolean(body.pinned))
   if (body.status !== undefined && VALID_STATUSES.includes(body.status)) {
     addField('status', body.status)
     if (body.status === 'published') addField('published_at', new Date())

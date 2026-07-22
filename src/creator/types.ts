@@ -81,6 +81,7 @@ export type RevenueEntry = {
 
 export type RevenueSummary = {
   totalCents: number
+  prevCents: number
   currency: 'CNY'
   bySource: { source: RevenueSource; label: string; amountCents: number; percent: number }[]
   trend: { date: string; amountCents: number }[]

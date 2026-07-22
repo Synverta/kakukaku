@@ -14,7 +14,7 @@ function CampaignCard({ campaign }: { campaign: Campaign }) {
   const progress = Math.min(100, Math.round((campaign.raisedTokens / campaign.goalTokens) * 100))
 
   return (
-    <Link className="cf-campaign-card" to={`/crowdfund/project/${campaign.id}`}>
+    <Link className="cf-campaign-card" to={`/cocreate/project/${campaign.id}`}>
       <div className="cf-campaign-cover" style={{ background: campaign.cover }}>
         <span className="cf-cover-cat">{campaign.category}</span>
         <span className="cf-cover-days">剩 {campaign.daysLeft} 天</span>
@@ -32,7 +32,7 @@ function CampaignCard({ campaign }: { campaign: Campaign }) {
           </div>
           <div className="cf-funding-meta">
             <span>
-              已筹 <strong>{formatTokens(campaign.raisedTokens)}</strong> token
+              已完成 <strong>{formatTokens(campaign.raisedTokens)}</strong> 共创点
             </span>
             <span>{progress}%</span>
           </div>
@@ -52,14 +52,14 @@ export function CrowdfundHome() {
         <div className="cf-badge-row">
           <span className="cf-pill">AIGC 共创</span>
           <span className="cf-pill">帮助创作人快速打造 IP</span>
-          <span className="cf-pill">共享算力 · 降低 token 成本</span>
+          <span className="cf-pill">共享算力 · 提高制作效率</span>
         </div>
         <h1>把灵感共创成 IP，让好创意不再被算力劝退。</h1>
         <p>
-          粉丝用 token 共创支持你心中的 IP，资金汇入共享算力池后批量生成，单次打造的成本显著下降。从角色设定到成片，一个人也能跑完一条 IP 生产线。
+          社区成员通过创意提案、投票和购买明确的数字权益参与 IP 制作。从角色设定到成片，每一步进度、采纳和交付都可以追溯。
         </p>
         <div className="cf-hero-actions">
-          <Link className="primary-button" to="/crowdfund">
+          <Link className="primary-button" to="/cocreate">
             浏览共创项目
           </Link>
           <Link className="ghost-button" to="/communities">
@@ -84,7 +84,7 @@ export function CrowdfundHome() {
             <span className="section-kicker">正在共创</span>
             <h2>为你精选的 IP 孵化计划</h2>
           </div>
-          <Link className="ghost-button small-button" to="/crowdfund/create">
+          <Link className="ghost-button small-button" to="/cocreate/create">
             {user ? '发起我的 IP 计划' : '登录后发起'}
           </Link>
         </div>
@@ -113,7 +113,7 @@ export function CrowdfundHome() {
         <div className="section-heading">
           <div>
             <span className="section-kicker">如何运作</span>
-            <h2>四步把灵感变成可收益的 IP</h2>
+            <h2>四步把灵感变成可交付的 IP</h2>
           </div>
         </div>
         <div className="cf-steps">
@@ -131,7 +131,7 @@ export function CrowdfundHome() {
         <div className="section-heading">
           <div>
             <span className="section-kicker">为什么更省</span>
-            <h2>共创如何降低 token 成本</h2>
+            <h2>共创如何提高制作效率</h2>
           </div>
         </div>
         <div className="cf-reasons">
@@ -147,13 +147,13 @@ export function CrowdfundHome() {
       <section className="cf-cta-band">
         <div>
           <h2>想好要做什么 IP 了吗？</h2>
-          <p>先用 IP 工坊估算 token 预算，再一键发起属于你的共创计划。</p>
+          <p>先用 IP 工坊整理素材需求与制作计划，再一键发起属于你的共创项目。</p>
         </div>
         <div className="cf-hero-actions">
           <Link className="primary-button" to="/ip-studio">
             估算我的 IP 预算
           </Link>
-          <Link className="ghost-button" to={user ? '/crowdfund/create' : '/login'}>
+          <Link className="ghost-button" to={user ? '/cocreate/create' : '/login'}>
             {user ? '立即发起共创' : '登录后发起'}
           </Link>
         </div>

@@ -47,7 +47,7 @@ export function RegisterPage() {
           </div>
           <div>
             <strong>支持 IP 共创</strong>
-            <p>支持档位、获得分成、进入共创者榜单。</p>
+            <p>参与创意提案、获得数字权益，并在最终作品中留下贡献记录。</p>
           </div>
           <div>
             <strong>发起共创</strong>

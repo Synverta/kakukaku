@@ -13,7 +13,6 @@ import {
 import './App.css'
 import { CrowdfundHome } from './crowdfund/CrowdfundHome'
 import { CampaignDetail } from './crowdfund/CampaignDetail'
-import { IpStudio } from './crowdfund/IpStudio'
 import { CommunityHome } from './crowdfund/CommunityHome'
 import { LaunchCampaign } from './crowdfund/LaunchCampaign'
 import { MyOrders } from './crowdfund/MyOrders'
@@ -38,6 +37,13 @@ import { UpdreamPage } from './creator/UpdreamPage'
 import { PromotePage } from './creator/PromotePage'
 import { AcademyPage } from './creator/AcademyPage'
 import { useAuth } from './lib/auth'
+import { CommunityDetailPage } from './crowdfund/CommunityDetailPage'
+import { PostDetailPage } from './crowdfund/PostDetailPage'
+import { IpWorkshopPage } from './crowdfund/IpWorkshopPage'
+import { MyEntitlements } from './crowdfund/MyEntitlements'
+import { usePublicVideos } from './lib/publicVideos'
+import { api } from './lib/api'
+import type { PublicVideo } from './lib/publicVideos'
 import {
   categories,
   comments,
@@ -262,12 +268,19 @@ function App() {
         <Route path="/recharge" element={<RechargePage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/video/:videoId" element={<VideoPage />} />
+        <Route path="/published-video/:videoId" element={<PublishedVideoPage />} />
         <Route path="/crowdfund" element={<CrowdfundHome />} />
+        <Route path="/cocreate" element={<CrowdfundHome />} />
         <Route path="/crowdfund/project/:id" element={<CampaignDetail />} />
+        <Route path="/cocreate/project/:id" element={<CampaignDetail />} />
         <Route path="/crowdfund/create" element={<LaunchCampaign />} />
+        <Route path="/cocreate/create" element={<LaunchCampaign />} />
         <Route path="/my-orders" element={<MyOrders />} />
-        <Route path="/ip-studio" element={<IpStudio />} />
+        <Route path="/my-entitlements" element={<MyEntitlements />} />
+        <Route path="/ip-studio" element={<IpWorkshopPage />} />
         <Route path="/communities" element={<CommunityHome />} />
+        <Route path="/communities/:slug" element={<CommunityDetailPage />} />
+        <Route path="/communities/:slug/posts/:postId" element={<PostDetailPage />} />
         <Route path="/creator" element={<CreatorShell />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
@@ -296,6 +309,7 @@ function App() {
 }
 
 function HomePage() {
+  const { videos: publishedVideos } = usePublicVideos()
   const [searchParams, setSearchParams] = useSearchParams()
   const featuredVideo = videos[0]
   const ranking = [...videos].sort((left, right) => parseCompactNumber(right.views) - parseCompactNumber(left.views)).slice(0, 5)
@@ -364,7 +378,7 @@ function HomePage() {
           <p>粉丝用 token 支持你心中的 IP，平台批量生成把单次打造的成本打下来。从角色设定到成片，一个人也能跑完一条 IP 生产线。</p>
         </div>
         <div className="cf-hero-actions">
-          <Link className="primary-button" to="/crowdfund">
+          <Link className="primary-button" to="/cocreate">
             浏览共创项目
           </Link>
           <Link className="ghost-button" to="/ip-studio">
@@ -372,6 +386,20 @@ function HomePage() {
           </Link>
         </div>
       </section>
+
+      {publishedVideos.length > 0 ? (
+        <section className="section-block">
+          <div className="section-heading"><div><span className="section-kicker">最新投稿</span><h2>来自创作者中心的已发布作品</h2></div></div>
+          <div className="video-grid">
+            {publishedVideos.slice(0, 8).map((video) => (
+              <Link key={video.id} className="video-card" to={`/published-video/${video.id}`}>
+                <div className="video-card-cover" style={{ background: video.cover || 'linear-gradient(135deg,#2868ff,#18b6a0)' }}><span>{video.duration}</span></div>
+                <strong>{video.title}</strong><span>{video.creator?.name ?? '创作者'} · {video.views.toLocaleString('zh-CN')} 播放</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="section-block category-bar-block">
         <div className="section-heading category-heading">
@@ -621,6 +649,7 @@ function HistoryPage() {
 }
 
 function RankPage() {
+  const { videos: publishedVideos } = usePublicVideos()
   const ranking = [...videos]
     .sort((left, right) => parseCompactNumber(right.views) - parseCompactNumber(left.views))
     .slice(0, 20)
@@ -635,6 +664,11 @@ function RankPage() {
         </div>
       </section>
       <div className="ranking-list">
+        {publishedVideos.sort((left, right) => right.views - left.views).map((video, index) => (
+          <Link key={`db-${video.id}`} className="ranking-item" to={`/published-video/${video.id}`}>
+            <span className="ranking-index">{String(index + 1).padStart(2, '0')}</span><div><strong>{video.title}</strong><span>{video.creator?.name ?? '创作者'} · {video.views.toLocaleString('zh-CN')} 播放 · {video.category}</span></div>
+          </Link>
+        ))}
         {ranking.map((video, index) => (
           <Link key={video.id} className="ranking-item" to={`/video/${video.id}`}>
             <span className="ranking-index">{String(index + 1).padStart(2, '0')}</span>
@@ -649,6 +683,17 @@ function RankPage() {
       </div>
     </AppShell>
   )
+}
+
+function PublishedVideoPage() {
+  const { videoId } = useParams()
+  const [video, setVideo] = useState<PublicVideo | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    if (!videoId) return
+    api.get<{ video: PublicVideo }>(`/videos/${videoId}`).then((result) => setVideo(result.video)).catch(() => setError('作品不存在或尚未发布'))
+  }, [videoId])
+  return <AppShell><section className="section-block"><Link to="/">← 返回首页</Link>{error ? <div className="empty-state"><h3>{error}</h3></div> : !video ? <div className="empty-state"><h3>正在加载作品…</h3></div> : <><h1>{video.title}</h1><p>{video.creator?.name} · {video.category} · {video.views.toLocaleString('zh-CN')} 播放</p>{video.embedUrl ? <div className="video-frame"><iframe src={video.embedUrl} title={video.title} allowFullScreen /></div> : <video className="video-frame" controls src={video.videoSrc} poster={video.cover} />}<p>{video.description}</p><div className="tag-row">{video.tags.map((tag) => <span key={tag}>{tag}</span>)}</div></>}</section></AppShell>
 }
 
 function LoginPage() {
@@ -1795,8 +1840,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       return location.pathname === to
     }
 
-    if (to === '/crowdfund') {
-      return location.pathname === '/crowdfund' || location.pathname.startsWith('/crowdfund/')
+    if (to === '/cocreate') {
+      return location.pathname === '/cocreate' || location.pathname.startsWith('/cocreate/') || location.pathname.startsWith('/crowdfund')
     }
 
     if (to.startsWith('/?cat=')) {
@@ -2011,16 +2056,6 @@ function parseCompactNumber(value: string) {
   }
 
   return Number.parseFloat(value.replaceAll(',', ''))
-}
-
-function formatCompactNumber(value: number) {
-  if (value >= 100000000) {
-    return `${(value / 100000000).toFixed(2).replace(/\.?0+$/, '')} 亿`
-  }
-  if (value >= 10000) {
-    return `${(value / 10000).toFixed(1).replace(/\.0$/, '')} 万`
-  }
-  return value.toLocaleString('zh-CN')
 }
 
 function parseTimeRank(value: string) {

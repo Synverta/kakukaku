@@ -1,5 +1,6 @@
-import { Router } from 'express'
+import { Router, type Request, type Response } from 'express'
 import multer from 'multer'
+import type { RequestHandler } from 'express'
 import path from 'node:path'
 import fs from 'node:fs'
 import crypto from 'node:crypto'
@@ -90,11 +91,11 @@ function publicBaseUrl(req: { protocol: string; headers: Record<string, string |
   return `${proto}://${host}`
 }
 
-function runUpload<T>(middleware: multer.Middleware, req: Parameters<typeof middleware>[0]['handle'] extends infer H ? Parameters<H>[0] : never, res: Parameters<typeof middleware>[0]['handle'] extends infer H ? Parameters<H>[1] : never): Promise<T> {
+function runUpload(middleware: RequestHandler, req: Request, res: Response): Promise<void> {
   return new Promise((resolve, reject) => {
-    middleware(req as never, res as never, (err: unknown) => {
+    middleware(req, res, (err: unknown) => {
       if (err) reject(err instanceof Error ? err : new Error(String(err)))
-      else resolve(undefined as never)
+      else resolve()
     })
   })
 }

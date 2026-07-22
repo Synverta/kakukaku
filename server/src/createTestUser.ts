@@ -29,7 +29,7 @@ async function createTestUser() {
   const passwordHash = await hashPassword(password)
   const avatarLetter = username.slice(0, 1).toUpperCase()
 
-  const result = await query(
+  const result = await query<{ id: string; username: string; email: string | null; avatar_letter: string; created_at: Date }>(
     `insert into users (username, email, password_hash, avatar_letter)
      values ($1, $2, $3, $4)
      returning id, username, email, avatar_letter, created_at`,

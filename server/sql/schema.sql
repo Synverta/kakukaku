@@ -468,3 +468,159 @@ CREATE TABLE IF NOT EXISTS wallet_transactions (
 );
 CREATE INDEX IF NOT EXISTS wallet_tx_user_idx ON wallet_transactions (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS wallet_tx_trade_idx ON wallet_transactions (out_trade_no) WHERE out_trade_no IS NOT NULL;
+
+-- =========================================================
+-- 共创业务 v2：IP、创意贡献、数字权益、制作与交付
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS ips (
+  id            BIGSERIAL PRIMARY KEY,
+  slug          VARCHAR(64)  NOT NULL UNIQUE,
+  owner_user_id BIGINT       REFERENCES users(id) ON DELETE SET NULL,
+  title         VARCHAR(160) NOT NULL,
+  summary       VARCHAR(280) NOT NULL DEFAULT '',
+  description   TEXT         NOT NULL DEFAULT '',
+  category      VARCHAR(60)  NOT NULL DEFAULT '动画',
+  cover         TEXT         NOT NULL DEFAULT '',
+  status        VARCHAR(16)  NOT NULL DEFAULT 'active' CHECK (status IN ('draft', 'active', 'paused', 'completed', 'archived')),
+  created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ips_owner_idx ON ips (owner_user_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS ip_members (
+  ip_id       BIGINT      NOT NULL REFERENCES ips(id) ON DELETE CASCADE,
+  user_id     BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role        VARCHAR(16) NOT NULL DEFAULT 'contributor' CHECK (role IN ('owner', 'editor', 'producer', 'contributor')),
+  joined_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (ip_id, user_id)
+);
+
+ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS ip_id BIGINT REFERENCES ips(id) ON DELETE SET NULL;
+ALTER TABLE communities ADD COLUMN IF NOT EXISTS ip_id BIGINT REFERENCES ips(id) ON DELETE SET NULL;
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS ip_id BIGINT REFERENCES ips(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS campaigns_ip_idx ON campaigns (ip_id);
+CREATE INDEX IF NOT EXISTS communities_ip_idx ON communities (ip_id);
+CREATE INDEX IF NOT EXISTS videos_ip_idx ON videos (ip_id, published_at DESC);
+
+CREATE TABLE IF NOT EXISTS community_contributions (
+  thing_id       BIGINT      PRIMARY KEY REFERENCES community_post_things(thing_id) ON DELETE CASCADE,
+  ip_id          BIGINT      NOT NULL REFERENCES ips(id) ON DELETE CASCADE,
+  kind           VARCHAR(24) NOT NULL DEFAULT 'idea' CHECK (kind IN ('idea', 'script', 'character', 'artwork', 'music', 'voice', 'footage', 'other')),
+  license_code   VARCHAR(32) NOT NULL DEFAULT 'platform-cocreate',
+  status         VARCHAR(24) NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'reviewing', 'adopted', 'in_production', 'declined', 'withdrawn')),
+  credit_name    VARCHAR(80) NOT NULL DEFAULT '',
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS contributions_ip_idx ON community_contributions (ip_id, status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS contribution_events (
+  id                    BIGSERIAL PRIMARY KEY,
+  contribution_thing_id BIGINT      NOT NULL REFERENCES community_contributions(thing_id) ON DELETE CASCADE,
+  actor_user_id         BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  from_status           VARCHAR(24),
+  to_status             VARCHAR(24) NOT NULL,
+  note                  TEXT        NOT NULL DEFAULT '',
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS contribution_events_thing_idx ON contribution_events (contribution_thing_id, created_at DESC);
+
+-- 旧 perks JSON 继续作为展示快照，商品表是下单时的唯一价格来源。
+CREATE TABLE IF NOT EXISTS digital_products (
+  id             BIGSERIAL PRIMARY KEY,
+  campaign_id    TEXT         NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  code           VARCHAR(64)  NOT NULL,
+  name           VARCHAR(120) NOT NULL,
+  description    TEXT         NOT NULL DEFAULT '',
+  price_cents    INTEGER      NOT NULL CHECK (price_cents > 0),
+  support_points BIGINT       NOT NULL DEFAULT 0 CHECK (support_points >= 0),
+  benefits       JSONB        NOT NULL DEFAULT '[]'::jsonb,
+  active         BOOLEAN      NOT NULL DEFAULT TRUE,
+  created_at     TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  UNIQUE (campaign_id, code)
+);
+CREATE INDEX IF NOT EXISTS digital_products_campaign_idx ON digital_products (campaign_id, active);
+
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS product_id BIGINT REFERENCES digital_products(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS entitlements (
+  id             BIGSERIAL PRIMARY KEY,
+  user_id        BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  order_id       BIGINT      NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  product_id     BIGINT      NOT NULL REFERENCES digital_products(id) ON DELETE RESTRICT,
+  campaign_id    TEXT        NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  name           VARCHAR(120) NOT NULL,
+  benefits       JSONB       NOT NULL DEFAULT '[]'::jsonb,
+  status         VARCHAR(16) NOT NULL DEFAULT 'active' CHECK (status IN ('pending', 'active', 'delivered', 'revoked', 'expired')),
+  granted_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  delivered_at   TIMESTAMPTZ,
+  revoked_at     TIMESTAMPTZ,
+  UNIQUE (order_id, product_id)
+);
+CREATE INDEX IF NOT EXISTS entitlements_user_idx ON entitlements (user_id, granted_at DESC);
+
+CREATE TABLE IF NOT EXISTS production_projects (
+  id               BIGSERIAL PRIMARY KEY,
+  ip_id             BIGINT      REFERENCES ips(id) ON DELETE CASCADE,
+  campaign_id       TEXT        REFERENCES campaigns(id) ON DELETE SET NULL,
+  owner_user_id     BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title             VARCHAR(160) NOT NULL,
+  status            VARCHAR(16) NOT NULL DEFAULT 'planning' CHECK (status IN ('planning', 'active', 'blocked', 'completed', 'canceled')),
+  progress_percent INTEGER     NOT NULL DEFAULT 0 CHECK (progress_percent BETWEEN 0 AND 100),
+  planned_at        TIMESTAMPTZ,
+  completed_at      TIMESTAMPTZ,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS production_projects_campaign_idx ON production_projects (campaign_id, updated_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS production_projects_campaign_unique_idx ON production_projects (campaign_id) WHERE campaign_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS production_milestones (
+  id                    BIGSERIAL PRIMARY KEY,
+  production_project_id BIGINT       NOT NULL REFERENCES production_projects(id) ON DELETE CASCADE,
+  title                 VARCHAR(160) NOT NULL,
+  description           TEXT         NOT NULL DEFAULT '',
+  sequence              INTEGER      NOT NULL DEFAULT 0,
+  status                VARCHAR(16)  NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'active', 'blocked', 'completed', 'canceled')),
+  progress_percent      INTEGER      NOT NULL DEFAULT 0 CHECK (progress_percent BETWEEN 0 AND 100),
+  planned_at            TIMESTAMPTZ,
+  completed_at          TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS production_milestones_project_idx ON production_milestones (production_project_id, sequence);
+
+CREATE TABLE IF NOT EXISTS production_updates (
+  id                    BIGSERIAL PRIMARY KEY,
+  production_project_id BIGINT       NOT NULL REFERENCES production_projects(id) ON DELETE CASCADE,
+  milestone_id          BIGINT       REFERENCES production_milestones(id) ON DELETE SET NULL,
+  author_user_id        BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title                 VARCHAR(160) NOT NULL,
+  body                  TEXT         NOT NULL,
+  progress_percent      INTEGER      CHECK (progress_percent BETWEEN 0 AND 100),
+  created_at            TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS production_updates_project_idx ON production_updates (production_project_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS deliverables (
+  id                    BIGSERIAL PRIMARY KEY,
+  production_project_id BIGINT       NOT NULL REFERENCES production_projects(id) ON DELETE CASCADE,
+  milestone_id          BIGINT       REFERENCES production_milestones(id) ON DELETE SET NULL,
+  title                 VARCHAR(160) NOT NULL,
+  description           TEXT         NOT NULL DEFAULT '',
+  kind                  VARCHAR(16)  NOT NULL DEFAULT 'file' CHECK (kind IN ('video', 'file', 'access', 'credit', 'custom_asset')),
+  resource_url          TEXT         NOT NULL DEFAULT '',
+  status                VARCHAR(16)  NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'ready', 'released', 'retired')),
+  released_at           TIMESTAMPTZ,
+  created_at            TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS deliverables_project_idx ON deliverables (production_project_id, released_at DESC);
+
+CREATE TABLE IF NOT EXISTS entitlement_deliveries (
+  entitlement_id BIGINT      NOT NULL REFERENCES entitlements(id) ON DELETE CASCADE,
+  deliverable_id BIGINT      NOT NULL REFERENCES deliverables(id) ON DELETE CASCADE,
+  status         VARCHAR(16) NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'delivered', 'accepted', 'revoked')),
+  delivered_at   TIMESTAMPTZ,
+  accepted_at    TIMESTAMPTZ,
+  PRIMARY KEY (entitlement_id, deliverable_id)
+);

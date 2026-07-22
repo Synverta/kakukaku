@@ -50,8 +50,6 @@ export function PaymentModal({ draft, open, onClose, onPaid }: Props) {
       .post<OrderResponse>('/orders', {
         campaignId: draft.campaignId,
         tierId: draft.tierId,
-        tierName: draft.tierName,
-        tokens: draft.tokens,
         provider: draft.provider,
       })
       .then((res) => {
@@ -76,8 +74,6 @@ export function PaymentModal({ draft, open, onClose, onPaid }: Props) {
 
   useEffect(() => {
     if (!open || !orderResp || paid) return
-    if (draft.provider !== 'wechat') return
-
     pollRef.current = setInterval(async () => {
       try {
         const status = await api.get<{ order: { status: string } }>(
@@ -99,7 +95,7 @@ export function PaymentModal({ draft, open, onClose, onPaid }: Props) {
         pollRef.current = null
       }
     }
-  }, [open, orderResp, paid, draft.provider, onPaid])
+  }, [open, orderResp, paid, onPaid])
 
   function handleAlipayOpen() {
     if (!orderResp?.payUrl) return
@@ -153,10 +149,10 @@ export function PaymentModal({ draft, open, onClose, onPaid }: Props) {
         <div className="cf-modal-head">
           <span className="section-kicker">{draft.provider === 'alipay' ? '支付宝' : '微信支付'} 收银台</span>
           <h2>
-            {draft.tierName} · {draft.tokens} token
+            {draft.tierName}数字权益
           </h2>
           <p>
-            ¥ {(draft.tokens).toFixed(2)} · 订单生成中…
+            价格以服务端商品信息为准 · 订单生成中…
           </p>
         </div>
 
@@ -168,10 +164,11 @@ export function PaymentModal({ draft, open, onClose, onPaid }: Props) {
 
         {orderResp ? (
           <>
+            <p className="cf-modal-hint">订单金额 ¥ {(orderResp.order.amountCents / 100).toFixed(2)}</p>
             {paid ? (
               <div className="cf-modal-success">
                 <h3>支付成功！</h3>
-                <p>感谢共创，token 已经写入共创。</p>
+                <p>数字权益已经发放，可在我的订单中查看交付状态。</p>
               </div>
             ) : showPayRedirect ? (
               <div className="cf-modal-redirect">

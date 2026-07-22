@@ -198,7 +198,7 @@ export function RechargePage() {
           <span className="eyebrow">酷币钱包</span>
           <h1>用账户余额支持你喜欢的 IP 计划</h1>
           <p>
-            酷币用于站内一切支持行为：共创档位、付费视频、创作激励。充值享套餐赠送，多充多送。
+            酷币用于平台明确标注的站内数字内容与服务。共创数字权益当前通过持牌支付通道单独购买。
           </p>
         </div>
         <div className="recharge-balance-card">

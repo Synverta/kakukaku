@@ -15,6 +15,8 @@ export function StubPanel({ title, description, preview, ctaLabel = '敬请期�
         <span className="creator-page-eyebrow">Stub · 占位</span>
         <h1 className="creator-page-title">{title}</h1>
         <p className="creator-page-sub">{description}</p>
+        {preview ? <div className="preview">{preview}</div> : null}
+        <button className="primary-button" disabled type="button">{ctaLabel}</button>
       </div>
     </section>
   )

@@ -21,6 +21,17 @@ type OrderRow = {
   closed_at: Date | null
   refunded_at: Date | null
   refund_reason: string | null
+  product_id: string | null
+}
+
+type ProductRow = {
+  id: string
+  campaign_id: string
+  code: string
+  name: string
+  price_cents: number
+  support_points: string
+  benefits: unknown
 }
 
 function rowToOrder(row: OrderRow) {
@@ -41,6 +52,7 @@ function rowToOrder(row: OrderRow) {
     closedAt: row.closed_at?.toISOString() ?? null,
     refundedAt: row.refunded_at?.toISOString() ?? null,
     refundReason: row.refund_reason,
+    productId: row.product_id,
   }
 }
 
@@ -53,22 +65,27 @@ function generateOutTradeNo(userId: number): string {
 export const ordersRouter = Router()
 
 ordersRouter.post('/orders', requireAuth, async (req, res) => {
-  const { campaignId, tierId, tierName, tokens, provider, amountCents: clientAmountCents } = req.body ?? {}
+  const { campaignId, tierId, provider } = req.body ?? {}
 
   if (
     typeof campaignId !== 'string' ||
     typeof tierId !== 'string' ||
-    typeof tierName !== 'string' ||
-    typeof tokens !== 'number' ||
-    tokens <= 0
+    typeof tierId !== 'string'
   ) {
     return res.status(400).json({ error: 'invalid_payload' })
   }
 
   const providerName: 'alipay' | 'wechat' = provider === 'wechat' ? 'wechat' : 'alipay'
-  const amountCents = typeof clientAmountCents === 'number' && clientAmountCents > 0
-    ? Math.round(clientAmountCents)
-    : Math.max(1, Math.round(tokens))
+  const products = await query<ProductRow>(
+    `select p.* from digital_products p join campaigns c on c.id = p.campaign_id
+      where p.campaign_id = $1 and p.code = $2 and p.active = true and c.status = 'live' limit 1`,
+    [campaignId, tierId],
+  )
+  if (products.rowCount === 0) return res.status(404).json({ error: 'product_not_found', message: '数字权益不存在或已下架' })
+  const product = products.rows[0]
+  const tierName = product.name
+  const tokens = Number(product.support_points)
+  const amountCents = product.price_cents
 
   const outTradeNo = generateOutTradeNo(req.user!.sub)
   const providerImpl = getProvider(providerName)
@@ -77,14 +94,14 @@ ordersRouter.post('/orders', requireAuth, async (req, res) => {
     outTradeNo,
     amountCents,
     subject: `[${tierName}] ${campaignId} 支持 ${tokens} token`,
-    body: `${tierName} for ${campaignId} - ${tokens} tokens`,
+     body: `${tierName}数字权益`,
   })
 
   const inserted = await query<OrderRow>(
     `insert into orders (
        out_trade_no, user_id, campaign_id, tier_id, tier_name,
-       tokens, amount_cents, currency, provider, status
-     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+       tokens, amount_cents, currency, provider, status, product_id
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10)
      returning *`,
     [
       outTradeNo,
@@ -96,6 +113,7 @@ ordersRouter.post('/orders', requireAuth, async (req, res) => {
       amountCents,
       'CNY',
       providerName,
+      product.id,
     ],
   )
 
@@ -200,6 +218,17 @@ export async function reconcile(outTradeNo: string): Promise<{
          where id = $3`,
         [Number(order.tokens), isNewBacker ? 1 : 0, order.campaign_id],
       )
+    }
+
+    if (order.product_id) {
+      const product = await client.query<ProductRow>('select * from digital_products where id = $1', [order.product_id])
+      if (product.rowCount && product.rowCount > 0) {
+        await client.query(
+          `insert into entitlements (user_id,order_id,product_id,campaign_id,name,benefits,status)
+           values ($1,$2,$3,$4,$5,$6::jsonb,'active') on conflict (order_id,product_id) do nothing`,
+          [order.user_id, order.id, order.product_id, order.campaign_id, product.rows[0].name, JSON.stringify(product.rows[0].benefits ?? [])],
+        )
+      }
     }
 
     await client.query(
@@ -487,6 +516,7 @@ export async function refundPaidOrderForUser(
       `update orders set status = 'refunded', refunded_at = now(), refund_reason = $2 where out_trade_no = $1`,
       [outTradeNo, reason],
     )
+    await client.query(`update entitlements set status='revoked', revoked_at=now() where order_id=$1`, [order.id])
 
     await client.query(
       `update refund_attempts

@@ -46,7 +46,7 @@ export function CampaignDetail() {
     }
   }, [id])
 
-  if (!id) return <Navigate to="/crowdfund" replace />
+  if (!id) return <Navigate to="/cocreate" replace />
 
   if (loading && !campaign) {
     return (
@@ -63,7 +63,7 @@ export function CampaignDetail() {
         <section className="section-block">
           <div className="empty-state">
             <h3>{error}</h3>
-            <Link className="ghost-button small-button" to="/crowdfund" style={{ marginTop: '1rem', display: 'inline-block' }}>
+            <Link className="ghost-button small-button" to="/cocreate" style={{ marginTop: '1rem', display: 'inline-block' }}>
               返回共创列表
             </Link>
           </div>
@@ -71,14 +71,14 @@ export function CampaignDetail() {
       </AppShell>
     )
   }
-  if (!campaign) return <Navigate to="/crowdfund" replace />
+  if (!campaign) return <Navigate to="/cocreate" replace />
 
   const progress = Math.min(100, Math.round((campaign.raisedTokens / campaign.goalTokens) * 100))
 
   function handleSupport(tier: PerkTier) {
     if (!campaign) return
     if (!user) {
-      navigate('/login', { state: { returnTo: `/crowdfund/project/${campaign.id}` } })
+      navigate('/login', { state: { returnTo: `/cocreate/project/${campaign.id}` } })
       return
     }
     setPaymentDraft({
@@ -130,8 +130,8 @@ export function CampaignDetail() {
 
           <div className="section-heading top-gap">
             <div>
-              <span className="section-kicker">Token 去向</span>
-              <h2>共创到的 token 怎么花</h2>
+              <span className="section-kicker">制作资源</span>
+              <h2>创作资源如何分配</h2>
             </div>
           </div>
           <div className="cf-tokenplan">
@@ -150,8 +150,8 @@ export function CampaignDetail() {
 
           <div className="section-heading top-gap">
             <div>
-              <span className="section-kicker">孵化里程碑</span>
-              <h2>资金到位后分四步推进</h2>
+              <span className="section-kicker">制作里程碑</span>
+              <h2>按阶段公开推进与交付</h2>
             </div>
           </div>
           <div className="cf-milestones">
@@ -160,7 +160,7 @@ export function CampaignDetail() {
                 <span className="cf-milestone-dot" />
                 <div>
                   <strong>{milestone.label}</strong>
-                  <span>目标 {formatTokens(milestone.tokens)} token</span>
+                  <span>资源参考 {formatTokens(milestone.tokens)} 共创点</span>
                 </div>
                 <span className="cf-milestone-status">
                   {milestone.status === 'done' ? '已完成' : milestone.status === 'active' ? '进行中' : '待解锁'}
@@ -174,7 +174,7 @@ export function CampaignDetail() {
           <section className="section-block cf-funding-panel">
             <div className="cf-funding-figure">
               <strong>{formatTokens(campaign.raisedTokens)}</strong>
-              <span>/ 目标 {formatTokens(campaign.goalTokens)} token</span>
+               <span>/ 计划 {formatTokens(campaign.goalTokens)} 共创点</span>
             </div>
             <div className="cf-funding-rail">
               <span style={{ width: `${progress}%` }} />
@@ -194,7 +194,7 @@ export function CampaignDetail() {
               </div>
             </div>
             <div className="cf-pill" style={{ justifyContent: 'center' }}>
-              平台批量生成预计降低 {campaign.costSavingPercent}% token 成本
+               平台共享工具预计提高 {campaign.costSavingPercent}% 制作效率
             </div>
           </section>
 
@@ -226,8 +226,8 @@ export function CampaignDetail() {
           <section className="section-block">
             <div className="section-heading">
               <div>
-                <span className="section-kicker">支持档位</span>
-                <h2>选一个档位参与共创</h2>
+                 <span className="section-kicker">数字权益</span>
+                 <h2>购买具体权益参与共创</h2>
               </div>
             </div>
             <div className="cf-perk-list">
@@ -235,7 +235,7 @@ export function CampaignDetail() {
                 <article key={tier.id} className={`cf-perk${tier.highlight ? ' highlight' : ''}`}>
                   <div className="cf-perk-head">
                     <strong>{tier.name}</strong>
-                    <span>{formatTokens(tier.tokens)} token</span>
+                     <span>¥ {(tier.tokens / 100).toFixed(2)}</span>
                   </div>
                   <ul>
                     {tier.perks.map((perk) => (
@@ -243,7 +243,7 @@ export function CampaignDetail() {
                     ))}
                   </ul>
                   <button type="button" onClick={() => handleSupport(tier)}>
-                    {user ? `用 ${provider === 'alipay' ? '支付宝' : '微信'} 支持` : '登录后支持'}
+                     {user ? `购买${tier.name}` : '登录后购买'}
                   </button>
                 </article>
               ))}

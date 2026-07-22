@@ -26,6 +26,8 @@ type CampaignRow = {
   created_at: Date
 }
 
+type ProductSeed = { id: string; name: string; tokens: number; perks?: string[]; highlight?: boolean }
+
 function rowToCampaign(row: CampaignRow): Campaign {
   return {
     id: row.id,
@@ -60,23 +62,7 @@ async function ensureSeeded() {
         $8,$9,$10,$11,$12::text[],$13,
         $14::jsonb,$15::jsonb,$16::jsonb,$17,'live'
       )
-      on conflict (id) do update set
-        creator_name = excluded.creator_name,
-        creator_avatar = excluded.creator_avatar,
-        title = excluded.title,
-        category = excluded.category,
-        summary = excluded.summary,
-        cover = excluded.cover,
-        goal_tokens = excluded.goal_tokens,
-        raised_tokens = excluded.raised_tokens,
-        backers = excluded.backers,
-        days_left = excluded.days_left,
-        tags = excluded.tags,
-        description = excluded.description,
-        token_plan = excluded.token_plan,
-        perks = excluded.perks,
-        milestones = excluded.milestones,
-        cost_saving_percent = excluded.cost_saving_percent`,
+       on conflict (id) do nothing`,
       [
         c.id, c.creator, c.creatorAvatar, c.title, c.category, c.summary, c.cover,
         c.goalTokens, c.raisedTokens, c.backers, c.daysLeft, c.tags, c.description,
@@ -87,10 +73,30 @@ async function ensureSeeded() {
   }
 }
 
+async function syncProducts(campaignId: string, perks: ProductSeed[]) {
+  for (const perk of perks) {
+    const supportPoints = Math.max(1, Math.round(Number(perk.tokens)))
+    await query(
+      `insert into digital_products (campaign_id, code, name, description, price_cents, support_points, benefits, active)
+       values ($1,$2,$3,$4,$5,$6,$7::jsonb,true)
+       on conflict (campaign_id, code) do update set
+         name = excluded.name,
+         description = excluded.description,
+         price_cents = excluded.price_cents,
+         support_points = excluded.support_points,
+         benefits = excluded.benefits,
+         active = true,
+         updated_at = now()`,
+      [campaignId, perk.id, perk.name, `${perk.name}数字权益`, supportPoints, supportPoints, JSON.stringify(perk.perks ?? [])],
+    )
+  }
+}
+
 export const crowdfundRouter = Router()
 
 crowdfundRouter.get('/campaigns', optionalAuth, async (_req, res) => {
   await ensureSeeded()
+  for (const campaign of seedCampaigns) await syncProducts(campaign.id, campaign.perks)
   const rows = await query<CampaignRow>(
     `select * from campaigns order by created_at desc, id asc`,
   )
@@ -100,6 +106,8 @@ crowdfundRouter.get('/campaigns', optionalAuth, async (_req, res) => {
 crowdfundRouter.get('/campaigns/:id', optionalAuth, async (req, res) => {
   const id = req.params.id
   await ensureSeeded()
+  const seed = seedCampaigns.find((campaign) => campaign.id === id)
+  if (seed) await syncProducts(seed.id, seed.perks)
   const rows = await query<CampaignRow>('select * from campaigns where id = $1', [id])
   if (rows.rowCount === 0) {
     return res.status(404).json({ error: 'not_found' })
@@ -144,6 +152,7 @@ crowdfundRouter.post('/campaigns', requireAuth, async (req, res) => {
         costSavingPercent,
       ],
     )
+    await syncProducts(id, perks as ProductSeed[])
     res.status(201).json({ campaign: rowToCampaign(inserted.rows[0]) })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)

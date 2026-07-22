@@ -55,7 +55,7 @@ export type DanmakuSeed = {
 export const navigationItems: NavigationItem[] = [
   { label: '首页', to: '/' },
   { label: '排行榜', to: '/rank' },
-  { label: '共创', to: '/crowdfund' },
+  { label: '共创', to: '/cocreate' },
   { label: '社区', to: '/communities' },
 ]
 

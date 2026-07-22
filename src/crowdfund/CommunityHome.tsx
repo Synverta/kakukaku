@@ -215,7 +215,7 @@ export function CommunityHome() {
           <section className="community-side-card community-joined-card">
             <div className="community-side-heading">你的社区</div>
             {allCommunities.filter((community) => joinedIds.includes(community.id)).slice(0, 4).map((community) => (
-              <Link key={community.id} className="community-joined-link" to={community.handle === 'mist-harbor' ? '/ip-studio' : `/communities?community=${community.handle}`}>
+               <Link key={community.id} className="community-joined-link" to={`/communities/${community.handle}`}>
                 <CommunityIcon community={community} size="small" /><span>r/{community.name}</span><b>›</b>
               </Link>
             ))}
@@ -240,7 +240,7 @@ function CommunityIcon({ community, size = 'normal' }: { community: Community; s
 }
 
 function CommunityLink({ community, children, className }: { community: Community; children: ReactNode; className?: string }) {
-  return <Link className={className} to={community.handle === 'mist-harbor' ? '/ip-studio' : `/communities?community=${community.handle}`}>{children}</Link>
+  return <Link className={className} to={`/communities/${community.handle}`}>{children}</Link>
 }
 
 function FeaturedCommunityCard({ community, isJoined, onJoin }: { community: Community; isJoined: boolean; onJoin: () => void }) {

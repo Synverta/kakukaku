@@ -70,7 +70,7 @@ export const assetTypes: AssetType[] = [
 ]
 
 export const crowdfundStats: CrowdfundStat[] = [
-  { label: '累计共创 Token 池', value: '8,640 万', detail: '来自 2.3 万次支持，直接进入 IP 孵化算力。' },
+  { label: '累计创作资源', value: '8,640 万', detail: '来自 2.3 万次参与，用于明确的 IP 制作任务。' },
   { label: '平均打造成本下降', value: '38%', detail: '共享基座模型 + 批量推理带来的规模效应。' },
   { label: '已孵化 IP', value: '126 个', detail: '覆盖虚拟偶像、动画、互动剧与音乐陪伴。' },
   { label: '参与创作者', value: '2,300+', detail: '新手与成熟团队都能发起自己的 IP 计划。' },
@@ -80,22 +80,22 @@ export const howItWorks = [
   {
     step: '01',
     title: '创作人发起 IP 计划',
-    detail: '用 IP 工坊把灵感拆成可量化的 token 预算，设定目标与回报档位。',
+    detail: '用 IP 工坊把灵感拆成可执行的制作任务，设定资源计划与数字权益。',
   },
   {
     step: '02',
-    title: '粉丝共创 Token',
-    detail: '支持者用 token 认领共创权益，越早期支持，越能影响角色与剧情走向。',
+    title: '社区参与创意共创',
+    detail: '参与者提交提案、投票并选择具体数字权益，共同影响角色与剧情走向。',
   },
   {
     step: '03',
     title: '平台批量生成降成本',
-    detail: '共创资金汇入共享算力池，批量推理与共享素材让单次生成成本显著下降。',
+    detail: '共享工具和授权素材库让制作任务批量执行，减少重复劳动。',
   },
   {
     step: '04',
-    title: 'IP 成型并共享收益',
-    detail: '成片、角色与衍生内容上线，出品人与共创官按档位共享 IP 收益。',
+    title: 'IP 成型并完成交付',
+    detail: '成片、角色与数字内容上线，贡献记录、权益内容和交付状态全程可查。',
   },
 ]
 
@@ -161,7 +161,7 @@ export const campaigns: Campaign[] = [
         id: 'tier-4',
         name: '出品人',
         tokens: 60000,
-        perks: ['IP 衍生收益分成权', '线下见面会名额', '角色设定文档共创署名'],
+        perks: ['限定数字设定集', '线下见面会名额', '角色设定文档共创署名'],
       },
     ],
     milestones: [
@@ -261,7 +261,7 @@ export const campaigns: Campaign[] = [
         id: 'tier-3',
         name: '档案出品人',
         tokens: 30000,
-        perks: ['以 NPC 身份进入剧情', 'IP 衍生收益分成', '主创线上复盘会'],
+        perks: ['以 NPC 身份进入剧情', '限定数字档案', '主创线上复盘会'],
       },
     ],
     milestones: [
@@ -361,7 +361,7 @@ export const campaigns: Campaign[] = [
         id: 'tier-3',
         name: '机甲出品人',
         tokens: 15000,
-        perks: ['定制专属小狗形态', '线下拼装活动', '周边分成权'],
+        perks: ['定制专属小狗形态', '线下拼装活动', '限定模型文件'],
       },
     ],
     milestones: [
@@ -411,7 +411,7 @@ export const campaigns: Campaign[] = [
         id: 'tier-3',
         name: '深夜出品人',
         tokens: 12000,
-        perks: ['定制专属晚安语音', '电台收益分成', '主理人线上夜聊'],
+        perks: ['定制专属晚安语音', '季度数字专辑', '主理人线上夜聊'],
       },
     ],
     milestones: [

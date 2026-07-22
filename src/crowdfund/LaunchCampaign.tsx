@@ -42,9 +42,9 @@ function buildPerks(goal: number): PerkTier[] {
     },
     {
       id: 'tier-3',
-      name: 'IP 出品人',
+       name: '深度共创伙伴',
       tokens: tier3,
-      perks: ['定制专属形象', 'IP 衍生收益分成', '主创线上共创会'],
+       perks: ['定制专属形象', '作品贡献署名', '主创线上共创会'],
     },
   ]
 }
@@ -82,12 +82,12 @@ export function LaunchCampaign() {
       <AppShell>
         <section className="cf-success">
           <h2>IP 计划已发起！</h2>
-          <p>它已经出现在共创列表里，粉丝可以用 token 支持你，平台批量生成会帮你把成本降下来。</p>
+           <p>它已经出现在共创列表里，社区成员可以参与提案并购买明确的数字权益。</p>
           <div className="cf-hero-actions" style={{ justifyContent: 'center' }}>
-            <Link className="primary-button" to={`/crowdfund/project/${createdCampaign.id}`}>
+             <Link className="primary-button" to={`/cocreate/project/${createdCampaign.id}`}>
               查看我的计划
             </Link>
-            <Link className="ghost-button" to="/crowdfund">
+             <Link className="ghost-button" to="/cocreate">
               回到共创列表
             </Link>
           </div>
@@ -147,7 +147,7 @@ export function LaunchCampaign() {
           发起你的 AIGC IP 计划
         </h1>
         <p style={{ margin: 0, color: '#5c6478', lineHeight: 1.7, maxWidth: '64ch' }}>
-          填好下面的信息，我们会自动生成支持档位与孵化里程碑。发起后粉丝就能用 token 支持你，平台共享算力池帮你降低生成成本。
+           填好下面的信息，我们会生成数字权益与制作里程碑。权益需要明确交付内容，创作进度会持续向参与者公开。
         </p>
       </section>
 
@@ -175,7 +175,7 @@ export function LaunchCampaign() {
               </select>
             </label>
             <label className="full-span">
-              目标 token 数
+               计划共创点
               <input
                 type="number"
                 min={1000}
@@ -194,7 +194,7 @@ export function LaunchCampaign() {
                 rows={5}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="想做成什么、token 会花在哪、支持者能得到什么。"
+                 placeholder="想做成什么、资源如何投入、参与者能得到哪些明确交付。"
               />
             </label>
             {error ? <div className="auth-error">{error}</div> : null}
@@ -202,7 +202,7 @@ export function LaunchCampaign() {
               <button type="submit" className="primary" disabled={submitting}>
                 {submitting ? '正在发起…' : '发起共创计划'}
               </button>
-              <button type="button" className="ghost" onClick={() => navigate('/crowdfund')}>
+               <button type="button" className="ghost" onClick={() => navigate('/cocreate')}>
                 取消
               </button>
             </div>
@@ -219,12 +219,12 @@ export function LaunchCampaign() {
             </div>
             <div className="quick-link-list">
               <article className="quick-link-card static-card">
-                <strong>3 档支持档位</strong>
-                <span>按目标 token 自动拆成体验 / 共创 / 出品三档。</span>
+                 <strong>3 项数字权益</strong>
+                 <span>按参与深度生成体验、设定参与和深度共创权益。</span>
               </article>
               <article className="quick-link-card static-card">
                 <strong>孵化里程碑</strong>
-                <span>概念设定 → 素材生成 → 成片上线，随资金解锁。</span>
+                 <span>概念设定 → 素材生成 → 成片上线，按制作状态推进。</span>
               </article>
               <article className="quick-link-card static-card">
                 <strong>成本节省标识</strong>
