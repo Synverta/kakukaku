@@ -520,6 +520,17 @@ function HomePage() {
           </section>
         </>
       ) : null}
+
+      <footer className="site-icp-footer">
+        <a
+          href="https://beian.miit.gov.cn/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="site-icp-link"
+        >
+          辽ICP备2026005046号-2
+        </a>
+      </footer>
     </AppShell>
   )
 }

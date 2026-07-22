@@ -12,6 +12,6 @@ if [[ ! -f .env ]]; then
 fi
 
 export NODE_ENV=production
-export PORT="${PORT:-5001}"
+export PORT="${PORT:-6002}"
 
 exec /usr/bin/env node ./dist/index.js
