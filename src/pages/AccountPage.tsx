@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth, type AuthUser } from '../lib/auth'
 import { api, getToken } from '../lib/api'
 
@@ -464,6 +464,15 @@ export function AccountPage() {
       <ProfileSection user={user} />
       <PasswordSection />
       <DeleteSection />
+      <section className="account-section">
+        <header>
+          <h2>举报与申诉</h2>
+          <p>查看你提交过的举报与处理进度，必要时可对处理结果发起申诉。</p>
+        </header>
+        <Link className="account-link-button" to="/account/reports">
+          进入「我的举报」 →
+        </Link>
+      </section>
     </div>
   )
 }

@@ -12,6 +12,7 @@ export type AuthUser = {
   createdAt: string
   updatedAt: string
   deletedAt: string | null
+  role?: 'user' | 'admin'
 }
 
 type UpdateProfileInput = {
@@ -24,6 +25,7 @@ type UpdateProfileInput = {
 type AuthContextValue = {
   user: AuthUser | null
   loading: boolean
+  isAdmin: boolean
   login: (username: string, password: string) => Promise<AuthUser>
   register: (username: string, email: string | null, password: string) => Promise<AuthUser>
   logout: () => void
@@ -38,6 +40,7 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const isAdmin = user?.role === 'admin'
 
   const logout = useCallback(() => {
     setToken(null)
@@ -122,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
+      isAdmin,
       login,
       register,
       logout,
@@ -130,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       changePassword,
       deleteAccount,
     }),
-    [user, loading, login, register, logout, refreshUser, updateProfile, changePassword, deleteAccount],
+    [user, loading, isAdmin, login, register, logout, refreshUser, updateProfile, changePassword, deleteAccount],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
