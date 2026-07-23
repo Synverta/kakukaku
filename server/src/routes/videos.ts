@@ -110,10 +110,12 @@ videosRouter.get('/videos', optionalAuth, async (req, res) => {
   }
   params.push(limit)
   const orderBy = sort === 'popular' ? 'v.views desc, v.likes desc, v.published_at desc nulls last' : 'v.pinned desc, v.published_at desc nulls last, v.created_at desc'
+  const includeTakedown = req.query.include_takedown === '1' && req.user?.role === 'admin'
+  const filterTakedown = includeTakedown ? '' : 'v.takedown_at is null'
   const result = await query<VideoRow>(
     `select v.*, u.username as creator_name, u.avatar_letter as creator_avatar
        from videos v join users u on u.id = v.creator_id
-      where ${where.join(' and ')} order by ${orderBy} limit $${params.length}`,
+      where ${where.join(' and ')}${filterTakedown ? ' and ' + filterTakedown : ''} order by ${orderBy} limit $${params.length}`,
     params,
   )
   res.json({ videos: result.rows.map(rowToVideo) })
@@ -122,10 +124,12 @@ videosRouter.get('/videos', optionalAuth, async (req, res) => {
 videosRouter.get('/videos/:id', optionalAuth, async (req, res, next) => {
   const id = Number(req.params.id)
   if (!Number.isSafeInteger(id) || id < 1) return next()
+  const includeTakedown = req.query.include_takedown === '1' && req.user?.role === 'admin'
+  const filterTakedown = includeTakedown ? '' : ' and v.takedown_at is null'
   const result = await query<VideoRow>(
     `select v.*, u.username as creator_name, u.avatar_letter as creator_avatar
        from videos v join users u on u.id = v.creator_id
-      where v.id = $1 and v.status = 'published' and (v.published_at is null or v.published_at <= now())`,
+      where v.id = $1 and v.status = 'published' and (v.published_at is null or v.published_at <= now())${filterTakedown}`,
     [id],
   )
   if (result.rowCount === 0) return res.status(404).json({ error: 'not_found' })

@@ -8,7 +8,8 @@
     "start": "tsx src/index.ts",
     "db:test": "tsx src/dbTest.ts",
     "db:migrate": "tsx src/migrate.ts",
-    "db:create-test-user": "tsx src/createTestUser.ts"
+    "db:create-test-user": "tsx src/createTestUser.ts",
+    "admin:promote": "tsx src/promoteAdmin.ts"
   },
   "dependencies": {
     "@types/multer": "^2.2.0",

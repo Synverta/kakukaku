@@ -17,6 +17,7 @@ import { communitiesRouter } from './routes/communities'
 import { walletRouter } from './routes/wallet'
 import { uploadsRouter } from './routes/uploads'
 import { studioRouter } from './routes/studio'
+import { reportsRouter } from './routes/reports'
 
 const app = express()
 
@@ -53,6 +54,7 @@ app.use('/api', communitiesRouter)
 app.use('/api', walletRouter)
 app.use('/api', uploadsRouter)
 app.use('/api', studioRouter)
+app.use('/api', reportsRouter)
 
 app.use(async (error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const message = error instanceof Error ? error.message : String(error)

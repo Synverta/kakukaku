@@ -624,3 +624,162 @@ CREATE TABLE IF NOT EXISTS entitlement_deliveries (
   accepted_at    TIMESTAMPTZ,
   PRIMARY KEY (entitlement_id, deliverable_id)
 );
+
+-- =========================================================
+-- 举报 / 审核闭环（2026-07）
+-- =========================================================
+
+-- 用户角色：user / admin。admin 由 npm run admin:promote 手动提升。
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(16) NOT NULL DEFAULT 'user';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'users_role_check'
+  ) THEN
+    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('user', 'admin'));
+  END IF;
+END$$;
+
+CREATE INDEX IF NOT EXISTS users_role_idx ON users (role) WHERE role = 'admin';
+
+-- 视频/评论/弹幕/社区内容下架字段（与创作者自助的 status 字段解耦，避免被覆盖）
+ALTER TABLE videos            ADD COLUMN IF NOT EXISTS takedown_at       TIMESTAMPTZ;
+ALTER TABLE videos            ADD COLUMN IF NOT EXISTS takedown_reason   TEXT        NOT NULL DEFAULT '';
+ALTER TABLE videos            ADD COLUMN IF NOT EXISTS takedown_by       BIGINT      REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE videos            ADD COLUMN IF NOT EXISTS takedown_source   VARCHAR(32) NOT NULL DEFAULT 'admin_takedown';
+CREATE INDEX IF NOT EXISTS videos_takedown_idx ON videos (takedown_at);
+
+ALTER TABLE comments          ADD COLUMN IF NOT EXISTS takedown_at       TIMESTAMPTZ;
+ALTER TABLE comments          ADD COLUMN IF NOT EXISTS takedown_reason   TEXT        NOT NULL DEFAULT '';
+ALTER TABLE comments          ADD COLUMN IF NOT EXISTS takedown_by       BIGINT      REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE comments          ADD COLUMN IF NOT EXISTS takedown_source   VARCHAR(32) NOT NULL DEFAULT 'admin_takedown';
+CREATE INDEX IF NOT EXISTS comments_takedown_idx ON comments (takedown_at);
+
+ALTER TABLE danmaku           ADD COLUMN IF NOT EXISTS takedown_at       TIMESTAMPTZ;
+ALTER TABLE danmaku           ADD COLUMN IF NOT EXISTS takedown_reason   TEXT        NOT NULL DEFAULT '';
+ALTER TABLE danmaku           ADD COLUMN IF NOT EXISTS takedown_by       BIGINT      REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE danmaku           ADD COLUMN IF NOT EXISTS takedown_source   VARCHAR(32) NOT NULL DEFAULT 'admin_takedown';
+CREATE INDEX IF NOT EXISTS danmaku_takedown_idx ON danmaku (takedown_at);
+
+ALTER TABLE community_things  ADD COLUMN IF NOT EXISTS takedown_at       TIMESTAMPTZ;
+ALTER TABLE community_things  ADD COLUMN IF NOT EXISTS takedown_reason   TEXT        NOT NULL DEFAULT '';
+ALTER TABLE community_things  ADD COLUMN IF NOT EXISTS takedown_by       BIGINT      REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE community_things  ADD COLUMN IF NOT EXISTS takedown_source   VARCHAR(32) NOT NULL DEFAULT 'admin_takedown';
+CREATE INDEX IF NOT EXISTS community_things_takedown_idx ON community_things (takedown_at);
+
+-- 举报主表
+CREATE TABLE IF NOT EXISTS reports (
+  id              BIGSERIAL PRIMARY KEY,
+  reporter_id     BIGINT      NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+  target_type     VARCHAR(16) NOT NULL,
+  target_id       TEXT        NOT NULL,
+  reason_code     VARCHAR(32) NOT NULL,
+  reason_text     TEXT        NOT NULL DEFAULT '',
+  status          VARCHAR(16) NOT NULL DEFAULT 'pending',
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  handled_at      TIMESTAMPTZ,
+  handler_id      BIGINT      REFERENCES users(id) ON DELETE SET NULL,
+  resolution      TEXT        NOT NULL DEFAULT '',
+  merged_case_id  BIGINT,
+  CHECK (target_type IN ('video', 'comment', 'danmaku', 'community')),
+  CHECK (status IN ('pending', 'merged', 'accepted', 'rejected'))
+);
+CREATE INDEX IF NOT EXISTS reports_target_idx     ON reports (target_type, target_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS reports_reporter_idx   ON reports (reporter_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS reports_status_idx     ON reports (status, created_at DESC);
+
+-- 举报证据
+CREATE TABLE IF NOT EXISTS report_evidence (
+  id          BIGSERIAL PRIMARY KEY,
+  report_id   BIGINT      NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+  file_url    TEXT        NOT NULL,
+  file_name   TEXT        NOT NULL DEFAULT '',
+  size_bytes  BIGINT      NOT NULL DEFAULT 0,
+  mime_type   TEXT        NOT NULL DEFAULT '',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS report_evidence_report_idx ON report_evidence (report_id);
+
+-- 审核工单
+CREATE TABLE IF NOT EXISTS moderation_cases (
+  id                  BIGSERIAL PRIMARY KEY,
+  primary_report_id   BIGINT      NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+  related_report_ids  BIGINT[]    NOT NULL DEFAULT '{}',
+  target_type         VARCHAR(16) NOT NULL,
+  target_id           TEXT        NOT NULL,
+  status              VARCHAR(16) NOT NULL DEFAULT 'open',
+  assigned_to         BIGINT      REFERENCES users(id) ON DELETE SET NULL,
+  decision_reason     TEXT        NOT NULL DEFAULT '',
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  closed_at           TIMESTAMPTZ,
+  closed_by           BIGINT      REFERENCES users(id) ON DELETE SET NULL,
+  CHECK (status IN ('open', 'closed_rejected', 'closed_takedown', 'closed_merged'))
+);
+CREATE INDEX IF NOT EXISTS moderation_cases_target_idx  ON moderation_cases (target_type, target_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS moderation_cases_status_idx  ON moderation_cases (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS moderation_cases_assigned_idx ON moderation_cases (assigned_to);
+
+-- 用户处罚
+CREATE TABLE IF NOT EXISTS user_penalties (
+  id          BIGSERIAL PRIMARY KEY,
+  user_id     BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  level       VARCHAR(32) NOT NULL,
+  reason      TEXT        NOT NULL DEFAULT '',
+  case_id     BIGINT      REFERENCES moderation_cases(id) ON DELETE SET NULL,
+  started_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at  TIMESTAMPTZ,
+  lifted_at   TIMESTAMPTZ,
+  lifted_by   BIGINT      REFERENCES users(id) ON DELETE SET NULL,
+  CHECK (level IN ('warn', 'mute_comment', 'mute_post', 'post_ban', 'account_suspend'))
+);
+CREATE INDEX IF NOT EXISTS user_penalties_user_idx  ON user_penalties (user_id, lifted_at, expires_at);
+CREATE INDEX IF NOT EXISTS user_penalties_case_idx  ON user_penalties (case_id);
+
+-- 申诉
+CREATE TABLE IF NOT EXISTS appeals (
+  id              BIGSERIAL PRIMARY KEY,
+  case_id         BIGINT      NOT NULL REFERENCES moderation_cases(id) ON DELETE CASCADE,
+  appellant_id    BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reason          TEXT        NOT NULL,
+  status          VARCHAR(16) NOT NULL DEFAULT 'pending',
+  decision_text   TEXT        NOT NULL DEFAULT '',
+  decider_id      BIGINT      REFERENCES users(id) ON DELETE SET NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  decided_at      TIMESTAMPTZ,
+  CHECK (status IN ('pending', 'accepted', 'rejected'))
+);
+CREATE INDEX IF NOT EXISTS appeals_case_idx      ON appeals (case_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS appeals_appellant_idx ON appeals (appellant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS appeals_status_idx    ON appeals (status, created_at DESC);
+
+-- 审核日志（合规留痕）
+CREATE TABLE IF NOT EXISTS audit_events (
+  id           BIGSERIAL PRIMARY KEY,
+  actor_id     BIGINT,
+  actor_role   VARCHAR(16) NOT NULL DEFAULT 'user',
+  action       VARCHAR(64) NOT NULL,
+  target_type  VARCHAR(32) NOT NULL DEFAULT '',
+  target_id    TEXT        NOT NULL DEFAULT '',
+  payload      JSONB       NOT NULL DEFAULT '{}'::jsonb,
+  ip           INET,
+  user_agent   TEXT        NOT NULL DEFAULT '',
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS audit_actor_idx    ON audit_events (actor_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS audit_target_idx   ON audit_events (target_type, target_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS audit_action_idx   ON audit_events (action, created_at DESC);
+CREATE INDEX IF NOT EXISTS audit_created_idx  ON audit_events (created_at DESC);
+
+-- 通知
+CREATE TABLE IF NOT EXISTS notifications (
+  id          BIGSERIAL PRIMARY KEY,
+  user_id     BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type        VARCHAR(32) NOT NULL,
+  title       VARCHAR(160) NOT NULL,
+  body        TEXT        NOT NULL DEFAULT '',
+  payload     JSONB       NOT NULL DEFAULT '{}'::jsonb,
+  read_at     TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS notifications_user_unread_idx ON notifications (user_id, read_at, created_at DESC);

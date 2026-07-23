@@ -15,6 +15,7 @@ type UserRow = {
   updated_at: Date
   deleted_at: Date | null
   created_at: Date
+  role: string
 }
 
 type PublicUser = {
@@ -27,6 +28,7 @@ type PublicUser = {
   createdAt: string
   updatedAt: string
   deletedAt: string | null
+  role: 'user' | 'admin'
 }
 
 function toPublicUser(row: UserRow): PublicUser {
@@ -40,6 +42,7 @@ function toPublicUser(row: UserRow): PublicUser {
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
     deletedAt: row.deleted_at?.toISOString() ?? null,
+    role: row.role === 'admin' ? 'admin' : 'user',
   }
 }
 
@@ -78,12 +81,12 @@ authRouter.post('/register', async (req, res) => {
     `insert into users (username, email, password_hash, avatar_letter, password_updated_at, updated_at)
      values ($1, $2, $3, $4, now(), now())
      returning id, username, email, password_hash, avatar_letter, avatar_url, bio,
-               created_at, updated_at, deleted_at, password_updated_at`,
+               created_at, updated_at, deleted_at, password_updated_at, role`,
     [username, emailValue, passwordHash, avatarLetter],
   )
 
   const user = toPublicUser(inserted.rows[0])
-  const token = signToken({ sub: user.id, username: user.username })
+  const token = signToken({ sub: user.id, username: user.username, role: user.role })
 
   res.status(201).json({ token, user })
 })
@@ -97,7 +100,7 @@ authRouter.post('/login', async (req, res) => {
 
   const result = await query<UserRow>(
     `select id, username, email, password_hash, avatar_letter, avatar_url, bio,
-            created_at, updated_at, deleted_at
+            created_at, updated_at, deleted_at, role
        from users where username = $1 limit 1`,
     [username],
   )
@@ -117,7 +120,7 @@ authRouter.post('/login', async (req, res) => {
   }
 
   const user = toPublicUser(row)
-  const token = signToken({ sub: user.id, username: user.username })
+  const token = signToken({ sub: user.id, username: user.username, role: user.role })
 
   res.json({ token, user })
 })
@@ -125,7 +128,7 @@ authRouter.post('/login', async (req, res) => {
 authRouter.get('/me', requireAuth, async (req, res) => {
   const result = await query<UserRow>(
     `select id, username, email, password_hash, avatar_letter, avatar_url, bio,
-            created_at, updated_at, deleted_at
+            created_at, updated_at, deleted_at, role
        from users where id = $1 limit 1`,
     [req.user!.sub],
   )
@@ -201,7 +204,7 @@ authRouter.patch('/me', requireAuth, async (req, res) => {
   values.push(req.user!.sub)
   const sql = `update users set ${fields.join(', ')} where id = $${valueIndex} and deleted_at is null
                returning id, username, email, password_hash, avatar_letter, avatar_url, bio,
-                         created_at, updated_at, deleted_at`
+                         created_at, updated_at, deleted_at, role`
 
   const result = await query<UserRow>(sql, values)
   if (result.rowCount === 0) {

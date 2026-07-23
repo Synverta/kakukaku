@@ -145,6 +145,7 @@ communitiesRouter.delete('/communities/:slug/memberships', requireAuth, async (r
 communitiesRouter.get('/communities/:slug/posts', optionalAuth, async (req, res) => {
   const sort = req.query.sort === 'new' || req.query.sort === 'top' ? req.query.sort : 'hot'; const category = cleanText(req.query.category, 32); const limit = Math.min(100, Math.max(1, Number(req.query.limit ?? 30)))
   const params: unknown[] = [req.user?.sub ?? null, req.params.slug]; let where = `where c.slug = $2 and t.kind = 'post' and t.status = 'visible'`
+  if (req.user?.role !== 'admin') where += ' and t.takedown_at is null'
   if (category) { params.push(category); where += ` and p.category = $${params.length}` }
   params.push(limit)
   const orderBy = sort === 'new' ? 'p.is_pinned desc, t.created_at desc' : sort === 'top' ? 'p.is_pinned desc, t.score desc, t.created_at desc' : 'p.is_pinned desc, (t.score + t.comment_count * 3) desc, t.created_at desc'
@@ -222,7 +223,8 @@ communitiesRouter.post('/community-contributions/:id/adoption-events', requireAu
 
 communitiesRouter.get('/community-posts/:id', optionalAuth, async (req, res) => {
   const id = Number(req.params.id); if (!Number.isSafeInteger(id) || id < 1) return res.status(400).json({ error: 'invalid_id' })
-  const result = await query<PostRow>(`${postSelect()} where t.id = $2 and t.kind = 'post' and t.status <> 'deleted'`, [req.user?.sub ?? null, id])
+  const takedownFilter = req.user?.role === 'admin' ? '' : ' and t.takedown_at is null'
+  const result = await query<PostRow>(`${postSelect()} where t.id = $2 and t.kind = 'post' and t.status <> 'deleted'${takedownFilter}`, [req.user?.sub ?? null, id])
   if (result.rowCount === 0) return res.status(404).json({ error: 'not_found' })
   res.json({ post: toPost(result.rows[0]) })
 })
