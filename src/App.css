@@ -6262,6 +6262,18 @@
   background-size: contain;
 }
 
-.site-icp-link:hover {
+.site-legal-link-wrap {
+  display: inline-flex;
+  margin-right: 16px;
+}
+
+.site-legal-link {
+  color: var(--text-tertiary, #8f7668);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.site-legal-link:hover {
   color: var(--primary-color, #fb7299);
+  text-decoration: underline;
 }
