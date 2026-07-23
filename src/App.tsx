@@ -19,6 +19,15 @@ import { MyOrders } from './crowdfund/MyOrders'
 import { RegisterPage } from './pages/RegisterPage'
 import { AccountPage } from './pages/AccountPage'
 import { RechargePage } from './pages/RechargePage'
+import { LegalPage } from './pages/legal/LegalPage'
+import { MyReportsPage } from './account/MyReportsPage'
+import { AdminShell } from './admin/AdminShell'
+import { CasesListPage } from './admin/CasesListPage'
+import { CaseDetailPage } from './admin/CaseDetailPage'
+import { AppealsPage } from './admin/AppealsPage'
+import { AuditLogPage } from './admin/AuditLogPage'
+import { ReportDialog } from './components/ReportDialog'
+import { NotificationBell } from './components/NotificationBell'
 import { CreatorShell } from './creator/CreatorShell'
 import { DashboardPage } from './creator/DashboardPage'
 import { WorksPage } from './creator/WorksPage'
@@ -302,6 +311,25 @@ function App() {
           <Route path="peanut" element={<PeanutPage />} />
           <Route path="updream" element={<UpdreamPage />} />
         </Route>
+        <Route path="/legal" element={<Navigate to="/legal/user-agreement" replace />} />
+        <Route path="/legal/user-agreement" element={<LegalPage slug="user-agreement" />} />
+        <Route path="/legal/privacy-policy" element={<LegalPage slug="privacy-policy" />} />
+        <Route path="/legal/recharge-rules" element={<LegalPage slug="recharge-rules" />} />
+        <Route path="/legal/refund-rules" element={<LegalPage slug="refund-rules" />} />
+        <Route path="/legal/content-review-rules" element={<LegalPage slug="content-review-rules" />} />
+        <Route path="/legal/complaint-handling" element={<LegalPage slug="complaint-handling" />} />
+        <Route path="/legal/account-deletion" element={<LegalPage slug="account-deletion" />} />
+        <Route path="/legal/cybersecurity-management" element={<LegalPage slug="cybersecurity-management" />} />
+        <Route path="/legal/confidentiality-management" element={<LegalPage slug="confidentiality-management" />} />
+        <Route path="/legal/user-information-protection" element={<LegalPage slug="user-information-protection" />} />
+        <Route path="/account/reports" element={<MyReportsPage />} />
+        <Route path="/admin" element={<AdminShell />}>
+          <Route index element={<Navigate to="cases" replace />} />
+          <Route path="cases" element={<CasesListPage />} />
+          <Route path="cases/:id" element={<CaseDetailPage />} />
+          <Route path="appeals" element={<AppealsPage />} />
+          <Route path="audit" element={<AuditLogPage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </UserStateContext.Provider>
@@ -550,6 +578,11 @@ function HomePage() {
       ) : null}
 
       <footer className="site-icp-footer">
+        <span className="site-legal-link-wrap">
+          <Link to="/legal/user-agreement" className="site-legal-link">
+            协议与规则
+          </Link>
+        </span>
         <a
           href="https://beian.miit.gov.cn/"
           target="_blank"
@@ -1067,6 +1100,7 @@ function VideoPage() {
   const [draftBlockTerm, setDraftBlockTerm] = useState('')
   const [commentSort, setCommentSort] = useState<'hot' | 'newest'>('hot')
   const [likedCommentKeys, setLikedCommentKeys] = useState<Set<string>>(new Set())
+  const [reportTarget, setReportTarget] = useState<{ type: 'video' | 'comment' | 'danmaku'; id: string; label?: string } | null>(null)
   const playbackDurationLabel = formatVideoClock(videoDurationSeconds)
   const allComments: CommentEntry[] = [...(userCommentsByVideo[video.id] ?? []), ...(comments as CommentEntry[])]
   const sortedComments = commentSort === 'newest' ? [...allComments].reverse() : allComments
@@ -1414,7 +1448,11 @@ function VideoPage() {
               <span>分享</span>
               <span className="action-count">676</span>
             </button>
-            <button type="button" className="action-button">
+            <button
+              type="button"
+              className="action-button"
+              onClick={() => setReportTarget({ type: 'video', id: video.id, label: video.title })}
+            >
               <span className="action-glyph" aria-hidden="true">⚐</span>
               <span>稿件举报</span>
             </button>
@@ -1630,7 +1668,16 @@ function VideoPage() {
                         <span aria-hidden="true">💬</span>
                         <span>回复</span>
                       </button>
-                      <button type="button">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setReportTarget({
+                            type: 'comment',
+                            id: `static:${video.id}:${index}`,
+                            label: `评论：${comment.user}`,
+                          })
+                        }
+                      >
                         <span aria-hidden="true">↗</span>
                         <span>举报</span>
                       </button>
@@ -1774,12 +1821,19 @@ function VideoPage() {
           </section>
         </aside>
       </div>
+      <ReportDialog
+        targetType={reportTarget?.type ?? 'video'}
+        targetId={reportTarget?.id ?? ''}
+        targetLabel={reportTarget?.label}
+        open={Boolean(reportTarget)}
+        onClose={() => setReportTarget(null)}
+      />
     </AppShell>
   )
 }
 
 function HeaderAuthAction() {
-  const { user, logout, loading } = useAuth()
+  const { user, logout, loading, isAdmin } = useAuth()
 
   if (loading) {
     return <span className="header-link">…</span>
@@ -1795,6 +1849,15 @@ function HeaderAuthAction() {
 
   return (
     <>
+      <NotificationBell />
+      <Link className="header-link" to="/account/reports" title="我的举报">
+        我的举报
+      </Link>
+      {isAdmin ? (
+        <Link className="header-link" to="/admin/cases" title="审核后台">
+          审核后台
+        </Link>
+      ) : null}
       <Link className="header-link" to="/profile" title={user.username}>
         {user.username}
       </Link>
